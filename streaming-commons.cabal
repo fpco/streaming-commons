@@ -4,7 +4,7 @@
 name:                streaming-commons
 version:             0.1.0.0
 synopsis:            Common lower-level functions needed by various streaming data libraries
--- description:         
+description:         Provides low-dependency functionality commonly needed by various streaming data libraries, such as conduit and pipes.
 homepage:            https://github.com/fpco/streaming-commons
 license:             MIT
 license-file:        LICENSE
