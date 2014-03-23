@@ -442,7 +442,7 @@ class HasReadWrite a where
 instance HasReadWrite AppData where
     readLens f a = fmap (\x -> a { appRead' = x }) (f (appRead' a))
     writeLens f a = fmap (\x -> a { appWrite' = x }) (f (appWrite' a))
-#if !Windows
+#if !WINDOWS
 instance HasReadWrite AppDataUnix where
     readLens f a = fmap (\x -> a { appReadUnix = x }) (f (appReadUnix a))
     writeLens f a = fmap (\x -> a { appWriteUnix = x }) (f (appWriteUnix a))
@@ -454,7 +454,7 @@ appRead = getConstant . readLens Constant
 appWrite :: HasReadWrite a => a -> ByteString -> IO ()
 appWrite = getConstant . writeLens Constant
 
-#if !Windows
+#if !WINDOWS
 -- | Run an @Application@ with the given settings. This function will create a
 -- new listening socket, accept connections on it, and spawn a new thread for
 -- each connection.
