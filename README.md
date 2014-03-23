@@ -20,6 +20,7 @@ working start:
 * network, support back to 2.3. We do *not* need to support the
   network/network-bytestring split.
 * stm, preferably all the way back to 2.1.
+* transformers
 
 For debate:
 

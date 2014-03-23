@@ -23,6 +23,8 @@ extra-source-files:
 
 library
   exposed-modules:     Data.Streaming.Filesystem
+                       Data.Streaming.Network
+                       Data.Streaming.Network.Internal
                        Data.Streaming.Text
                        Data.Streaming.Zlib
                        Data.Streaming.Zlib.Lowlevel
@@ -37,7 +39,10 @@ library
 
   build-depends:       base >= 4 && < 5
                      , bytestring
+                     , directory
+                     , network
                      , text
+                     , transformers
                      , zlib
 
   c-sources:           cbits/zlib-helper.c
