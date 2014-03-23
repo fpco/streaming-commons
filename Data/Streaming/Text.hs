@@ -35,12 +35,12 @@
 module Data.Streaming.Text
     (
     -- * Streaming
-      streamUtf8
-    , streamUtf8Pure
-    , streamUtf16LE
-    , streamUtf16BE
-    , streamUtf32LE
-    , streamUtf32BE
+      decodeUtf8
+    , decodeUtf8Pure
+    , decodeUtf16LE
+    , decodeUtf16BE
+    , decodeUtf32LE
+    , decodeUtf32BE
 
     -- * Type
     , DecodeResult (..)
@@ -107,14 +107,14 @@ newtype DecoderState = DecoderState Word32 deriving (Eq, Show, Num, Storable)
 
 -- | /O(n)/ Convert a lazy 'ByteString' into a 'Stream Char', using
 -- UTF-8 encoding.
-streamUtf8 :: B.ByteString -> DecodeResult
-streamUtf8 = decodeChunk B.empty 0 0
+decodeUtf8 :: B.ByteString -> DecodeResult
+decodeUtf8 = decodeChunk B.empty 0 0
  where
   decodeChunkCheck :: B.ByteString -> CodePoint -> DecoderState -> B.ByteString -> DecodeResult
   decodeChunkCheck bsOld codepoint state bs
     | B.null bs =
         if B.null bsOld
-            then DecodeResultSuccess T.empty streamUtf8
+            then DecodeResultSuccess T.empty decodeUtf8
             else DecodeResultFailure T.empty bsOld
     | otherwise = decodeChunk bsOld codepoint state bs
   -- We create a slightly larger than necessary buffer to accommodate a
@@ -161,8 +161,8 @@ streamUtf8 = decodeChunk B.empty 0 0
 
 -- | /O(n)/ Convert a lazy 'ByteString' into a 'Stream Char', using
 -- UTF-8 encoding.
-streamUtf8Pure :: B.ByteString -> DecodeResult
-streamUtf8Pure =
+decodeUtf8Pure :: B.ByteString -> DecodeResult
+decodeUtf8Pure =
     beginChunk S0
   where
     beginChunk :: S -> B.ByteString -> DecodeResult
@@ -226,8 +226,8 @@ streamUtf8Pure =
 
 -- | /O(n)/ Convert a 'ByteString' into a 'Stream Char', using little
 -- endian UTF-16 encoding.
-streamUtf16LE :: B.ByteString -> DecodeResult
-streamUtf16LE =
+decodeUtf16LE :: B.ByteString -> DecodeResult
+decodeUtf16LE =
     beginChunk S0
   where
     beginChunk :: S -> B.ByteString -> DecodeResult
@@ -295,8 +295,8 @@ streamUtf16LE =
 
 -- | /O(n)/ Convert a 'ByteString' into a 'Stream Char', using big
 -- endian UTF-16 encoding.
-streamUtf16BE :: B.ByteString -> DecodeResult
-streamUtf16BE =
+decodeUtf16BE :: B.ByteString -> DecodeResult
+decodeUtf16BE =
     beginChunk S0
   where
     beginChunk :: S -> B.ByteString -> DecodeResult
@@ -364,8 +364,8 @@ streamUtf16BE =
 
 -- | /O(n)/ Convert a 'ByteString' into a 'Stream Char', using little
 -- endian UTF-32 encoding.
-streamUtf32LE :: B.ByteString -> DecodeResult
-streamUtf32LE =
+decodeUtf32LE :: B.ByteString -> DecodeResult
+decodeUtf32LE =
     beginChunk S0
   where
     beginChunk :: S -> B.ByteString -> DecodeResult
@@ -430,8 +430,8 @@ streamUtf32LE =
 
 -- | /O(n)/ Convert a 'ByteString' into a 'Stream Char', using big
 -- endian UTF-32 encoding.
-streamUtf32BE :: B.ByteString -> DecodeResult
-streamUtf32BE =
+decodeUtf32BE :: B.ByteString -> DecodeResult
+decodeUtf32BE =
     beginChunk S0
   where
     beginChunk :: S -> B.ByteString -> DecodeResult
