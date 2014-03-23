@@ -17,10 +17,19 @@ cabal-version:       >=1.8
 extra-source-files:
     test/filesystem/*.txt
     test/filesystem/bin/*.txt
+    cbits/*.h
+    test/LICENSE.gz
 
 library
   exposed-modules:     Data.Streaming.Filesystem
+                       Data.Streaming.Zlib
+                       Data.Streaming.Zlib.Lowlevel
   build-depends:       base >= 4 && < 5
+                     , bytestring
+                     , zlib
+
+  c-sources:           cbits/zlib-helper.c
+
   if os(windows)
     build-depends:     Win32
                      , filepath
@@ -34,9 +43,14 @@ test-suite test
     type:           exitcode-stdio-1.0
     ghc-options:    -Wall -threaded
     other-modules:  Data.Streaming.FilesystemSpec
+                    Data.Streaming.ZlibSpec
     build-depends:  base
                   , streaming-commons
                   , hspec >= 1.8
+
+                  , QuickCheck
+                  , bytestring
+                  , zlib
 
 source-repository head
   type:     git
