@@ -22,7 +22,8 @@ extra-source-files:
     test/LICENSE.gz
 
 library
-  exposed-modules:     Data.Streaming.Filesystem
+  exposed-modules:     Data.Streaming.FileRead
+                       Data.Streaming.Filesystem
                        Data.Streaming.Network
                        Data.Streaming.Network.Internal
                        Data.Streaming.Text
@@ -53,6 +54,7 @@ library
     build-depends:     Win32
                      , filepath
     cpp-options:       -DWINDOWS
+    other-modules:     System.Win32File
   else
     build-depends:     unix
 
@@ -61,7 +63,8 @@ test-suite test
     main-is:        Spec.hs
     type:           exitcode-stdio-1.0
     ghc-options:    -Wall -threaded
-    other-modules:  Data.Streaming.FilesystemSpec
+    other-modules:  Data.Streaming.FileReadSpec
+                    Data.Streaming.FilesystemSpec
                     Data.Streaming.TextSpec
                     Data.Streaming.ZlibSpec
     build-depends:  base
