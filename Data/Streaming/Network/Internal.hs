@@ -4,9 +4,11 @@ module Data.Streaming.Network.Internal
     , ClientSettings (..)
     , HostPreference (..)
     , Message (..)
+    , AppData (..)
 #if !WINDOWS
     , ServerSettingsUnix (..)
     , ClientSettingsUnix (..)
+    , AppDataUnix (..)
 #endif
     ) where
 
@@ -16,17 +18,17 @@ import Network.Socket (Socket, SockAddr)
 
 -- | Settings for a TCP server. It takes a port to listen on, and an optional
 -- hostname to bind to.
-data ServerSettings m = ServerSettings
-    { serverPort :: Int
-    , serverHost :: HostPreference
-    , serverAfterBind :: Socket -> m ()
-    , serverNeedLocalAddr :: Bool
+data ServerSettings = ServerSettings
+    { serverPort :: !Int
+    , serverHost :: !HostPreference
+    , serverAfterBind :: !(Socket -> IO ())
+    , serverNeedLocalAddr :: !Bool
     }
 
 -- | Settings for a TCP client, specifying how to connect to the server.
 data ClientSettings = ClientSettings
-    { clientPort :: Int
-    , clientHost :: ByteString
+    { clientPort :: !Int
+    , clientHost :: !ByteString
     }
 
 -- | Which host to bind.
@@ -74,18 +76,34 @@ instance IsString HostPreference where
             _ -> Host s'
     fromString s = Host s
 
+#if !WINDOWS
 -- | Settings for a Unix domain sockets server.
-data ServerSettingsUnix m = ServerSettingsUnix
-    { serverPath :: FilePath
-    , serverAfterBindUnix :: Socket -> m ()
+data ServerSettingsUnix = ServerSettingsUnix
+    { serverPath :: !FilePath
+    , serverAfterBindUnix :: !(Socket -> IO ())
     }
 
 -- | Settings for a Unix domain sockets client.
 data ClientSettingsUnix = ClientSettingsUnix
-    { clientPath :: FilePath
+    { clientPath :: !FilePath
     }
+
+-- | The data passed to a Unix domain sockets @Application@.
+data AppDataUnix = AppDataUnix
+    { appReadUnix :: !(IO ByteString)
+    , appWriteUnix :: !(ByteString -> IO ())
+    }
+#endif
 
 -- | Representation of a single UDP message
 data Message = Message { msgData :: {-# UNPACK #-} !ByteString
                        , msgSender :: !SockAddr
                        }
+
+-- | The data passed to an @Application@.
+data AppData = AppData
+    { appRead' :: !(IO ByteString)
+    , appWrite' :: !(ByteString -> IO ())
+    , appSockAddr' :: !SockAddr
+    , appLocalAddr' :: !(Maybe SockAddr)
+    }

@@ -5,10 +5,12 @@ module Data.Streaming.Network
       ServerSettings
     , ClientSettings
     , HostPreference
-    , Message
+    , Message (..)
+    , AppData
 #if !WINDOWS
     , ServerSettingsUnix
     , ClientSettingsUnix
+    , AppDataUnix
 #endif
       -- ** Smart constructors
     , serverSettingsTCP
@@ -23,6 +25,7 @@ module Data.Streaming.Network
       -- ** Classes
     , HasPort (..)
     , HasAfterBind (..)
+    , HasReadWrite (..)
 #if !WINDOWS
     , HasPath (..)
 #endif
@@ -42,6 +45,10 @@ module Data.Streaming.Network
 #if !WINDOWS
     , getPath
 #endif
+    , appRead
+    , appWrite
+    , appSockAddr
+    , appLocalAddr
       -- * Functions
       -- ** General
     , bindPortGen
@@ -51,6 +58,10 @@ module Data.Streaming.Network
     , bindPortTCP
     , getSocketTCP
     , safeRecv
+    , runTCPServer
+    , runTCPClient
+    , ConnectionHandle (..)
+    , runTCPServerWithHandle
       -- ** UDP
     , bindPortUDP
     , getSocketUDP
@@ -58,6 +69,8 @@ module Data.Streaming.Network
       -- ** Unix
     , bindPath
     , getSocketUnix
+    , runUnixServer
+    , runUnixClient
 #endif
     ) where
 
@@ -66,7 +79,7 @@ import Data.Streaming.Network.Internal
 import Control.Concurrent (threadDelay)
 import Control.Exception (IOException, try, SomeException, throwIO, bracketOnError)
 import Network.Socket (Socket, AddrInfo, SocketType)
-import Network.Socket.ByteString (recv)
+import Network.Socket.ByteString (recv, sendAll)
 import System.IO.Error (isDoesNotExistError)
 import qualified Data.ByteString.Char8 as S8
 import qualified Control.Exception as E
@@ -74,9 +87,10 @@ import Data.ByteString (ByteString)
 import System.Directory (removeFile)
 import Data.Functor.Constant (Constant (Constant, getConstant))
 import Data.Functor.Identity (Identity (Identity, runIdentity))
+import Control.Concurrent (forkIO)
+import Control.Monad (forever)
 #if WINDOWS
 import Control.Concurrent.MVar (putMVar, takeMVar, newEmptyMVar)
-import Control.Concurrent (forkIO)
 #endif
 
 -- | Attempt to connect to the given host/port using given @SocketType@.
@@ -188,9 +202,8 @@ removeFileSafe path =
 
 -- | Smart constructor.
 serverSettingsUnix
-    :: Monad m
-    => FilePath -- ^ path to bind to
-    -> ServerSettingsUnix m
+    :: FilePath -- ^ path to bind to
+    -> ServerSettingsUnix
 serverSettingsUnix path = ServerSettingsUnix
     { serverPath = path
     , serverAfterBindUnix = const $ return ()
@@ -224,18 +237,16 @@ safeRecv s buf = do
 
 -- | Smart constructor.
 serverSettingsUDP
-    :: Monad m
-    => Int -- ^ port to bind to
+    :: Int -- ^ port to bind to
     -> HostPreference -- ^ host binding preferences
-    -> ServerSettings m
+    -> ServerSettings
 serverSettingsUDP = serverSettingsTCP
 
 -- | Smart constructor.
 serverSettingsTCP
-    :: Monad m
-    => Int -- ^ port to bind to
+    :: Int -- ^ port to bind to
     -> HostPreference -- ^ host binding preferences
-    -> ServerSettings m
+    -> ServerSettings
 serverSettingsTCP port host = ServerSettings
     { serverPort = port
     , serverHost = host
@@ -308,7 +319,7 @@ message = Message
 
 class HasPort a where
     portLens :: Functor f => (Int -> f Int) -> a -> f a
-instance HasPort (ServerSettings m) where
+instance HasPort ServerSettings where
     portLens f ss = fmap (\p -> ss { serverPort = p }) (f (serverPort ss))
 instance HasPort ClientSettings where
     portLens f ss = fmap (\p -> ss { clientPort = p }) (f (clientPort ss))
@@ -319,10 +330,10 @@ getPort = getConstant . portLens Constant
 setPort :: HasPort a => Int -> a -> a
 setPort p = runIdentity . portLens (const (Identity p))
 
-setHostPref :: HostPreference -> ServerSettings m -> ServerSettings m
+setHostPref :: HostPreference -> ServerSettings -> ServerSettings
 setHostPref hp ss = ss { serverHost = hp }
 
-getHostPref :: ServerSettings m -> HostPreference
+getHostPref :: ServerSettings -> HostPreference
 getHostPref = serverHost
 
 setHost :: ByteString -> ClientSettings -> ClientSettings
@@ -334,7 +345,7 @@ getHost = clientHost
 #if !WINDOWS
 class HasPath a where
     pathLens :: Functor f => (FilePath -> f FilePath) -> a -> f a
-instance HasPath (ServerSettingsUnix m) where
+instance HasPath ServerSettingsUnix where
     pathLens f ss = fmap (\p -> ss { serverPath = p }) (f (serverPath ss))
 instance HasPath ClientSettingsUnix where
     pathLens f ss = fmap (\p -> ss { clientPath = p }) (f (clientPath ss))
@@ -346,14 +357,14 @@ setPath :: HasPath a => FilePath -> a -> a
 setPath p = runIdentity . pathLens (const (Identity p))
 #endif
 
-setNeedLocalAddr :: Bool -> ServerSettings m -> ServerSettings m
+setNeedLocalAddr :: Bool -> ServerSettings -> ServerSettings
 setNeedLocalAddr x y = y { serverNeedLocalAddr = x }
 
-getNeedLocalAddr :: ServerSettings m -> Bool
+getNeedLocalAddr :: ServerSettings -> Bool
 getNeedLocalAddr = serverNeedLocalAddr
 
 class HasAfterBind a where
-    afterBindLens :: Functor f => ((Socket -> m1 ()) -> f (Socket -> m2 ())) -> a m1 -> f (a m2)
+    afterBindLens :: Functor f => ((Socket -> IO ()) -> f (Socket -> IO ())) -> a -> f a
 instance HasAfterBind ServerSettings where
     afterBindLens f ss = fmap (\p -> ss { serverAfterBind = p }) (f (serverAfterBind ss))
 #if !WINDOWS
@@ -361,8 +372,120 @@ instance HasAfterBind ServerSettingsUnix where
     afterBindLens f ss = fmap (\p -> ss { serverAfterBindUnix = p }) (f (serverAfterBindUnix ss))
 #endif
 
-getAfterBind :: HasAfterBind a => a m -> (Socket -> m ())
+getAfterBind :: HasAfterBind a => a -> (Socket -> IO ())
 getAfterBind = getConstant . afterBindLens Constant
 
-setAfterBind :: HasAfterBind a => (Socket -> m ()) -> a m' -> a m
+setAfterBind :: HasAfterBind a => (Socket -> IO ()) -> a -> a
 setAfterBind p = runIdentity . afterBindLens (const (Identity p))
+
+type ConnectionHandle = Socket -> NS.SockAddr -> Maybe NS.SockAddr -> IO ()
+
+runTCPServerWithHandle :: ServerSettings -> ConnectionHandle -> IO ()
+runTCPServerWithHandle (ServerSettings port host afterBind needLocalAddr) handle =
+    E.bracket
+        (bindPortTCP port host)
+        NS.sClose
+        (\socket -> do
+            afterBind socket
+            forever $ serve socket)
+  where
+    serve lsocket = E.bracketOnError
+        (acceptSafe lsocket)
+        (\(socket, _) -> NS.sClose socket)
+        $ \(socket, addr) -> do
+            mlocal <- if needLocalAddr
+                        then fmap Just $ NS.getSocketName socket
+                        else return Nothing
+            _ <- E.mask $ \restore -> forkIO
+               $ restore (handle socket addr mlocal)
+                    `E.finally` NS.sClose socket
+            return ()
+
+
+
+-- | Run an @Application@ with the given settings. This function will create a
+-- new listening socket, accept connections on it, and spawn a new thread for
+-- each connection.
+runTCPServer :: ServerSettings -> (AppData -> IO ()) -> IO ()
+runTCPServer settings app = runTCPServerWithHandle settings app'
+  where app' socket addr mlocal =
+          let ad = AppData
+                { appRead' = safeRecv socket 4096
+                , appWrite' = sendAll socket
+                , appSockAddr' = addr
+                , appLocalAddr' = mlocal
+                }
+          in
+            app ad
+
+-- | Run an @Application@ by connecting to the specified server.
+runTCPClient :: ClientSettings -> (AppData -> IO a) -> IO a
+runTCPClient (ClientSettings port host) app = E.bracket
+    (getSocketTCP host port)
+    (NS.sClose . fst)
+    (\(s, address) -> app AppData
+        { appRead' = safeRecv s 4096
+        , appWrite' = sendAll s
+        , appSockAddr' = address
+        , appLocalAddr' = Nothing
+        })
+
+appLocalAddr :: AppData -> Maybe NS.SockAddr
+appLocalAddr = appLocalAddr'
+
+appSockAddr :: AppData -> NS.SockAddr
+appSockAddr = appSockAddr'
+
+class HasReadWrite a where
+    readLens :: Functor f => (IO ByteString -> f (IO ByteString)) -> a -> f a
+    writeLens :: Functor f => ((ByteString -> IO ()) -> f (ByteString -> IO ())) -> a -> f a
+instance HasReadWrite AppData where
+    readLens f a = fmap (\x -> a { appRead' = x }) (f (appRead' a))
+    writeLens f a = fmap (\x -> a { appWrite' = x }) (f (appWrite' a))
+#if !Windows
+instance HasReadWrite AppDataUnix where
+    readLens f a = fmap (\x -> a { appReadUnix = x }) (f (appReadUnix a))
+    writeLens f a = fmap (\x -> a { appWriteUnix = x }) (f (appWriteUnix a))
+#endif
+
+appRead :: HasReadWrite a => a -> IO ByteString
+appRead = getConstant . readLens Constant
+
+appWrite :: HasReadWrite a => a -> ByteString -> IO ()
+appWrite = getConstant . writeLens Constant
+
+#if !Windows
+-- | Run an @Application@ with the given settings. This function will create a
+-- new listening socket, accept connections on it, and spawn a new thread for
+-- each connection.
+runUnixServer :: ServerSettingsUnix -> (AppDataUnix -> IO ()) -> IO ()
+runUnixServer (ServerSettingsUnix path afterBind) app = E.bracket
+    (bindPath path)
+    NS.sClose
+    (\socket -> do
+        afterBind socket
+        forever $ serve socket)
+  where
+    serve lsocket = E.bracketOnError
+        (acceptSafe lsocket)
+        (\(socket, _) -> NS.sClose socket)
+        $ \(socket, _) -> do
+            let ad = AppDataUnix
+                    { appReadUnix = safeRecv socket 4096
+                    , appWriteUnix = sendAll socket
+                    }
+            _ <- E.mask $ \restore -> forkIO
+                $ restore (app ad)
+                    `E.finally` NS.sClose socket
+            return ()
+
+-- | Run an @Application@ by connecting to the specified server.
+runUnixClient :: ClientSettingsUnix -> (AppDataUnix -> IO a) -> IO a
+runUnixClient (ClientSettingsUnix path) app = E.bracket
+    (getSocketUnix path)
+    NS.sClose
+    (\sock -> app AppDataUnix
+        { appReadUnix = safeRecv sock 4096
+        , appWriteUnix = sendAll sock
+        })
+#endif
