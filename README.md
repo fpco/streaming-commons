@@ -1,7 +1,10 @@
 streaming-commons
 =================
 
-Common lower-level functions needed by various streaming data libraries
+Common lower-level functions needed by various streaming data libraries.
+Intended to be shared by libraries like conduit and pipes.
+
+[![Build Status](https://travis-ci.org/fpco/streaming-commons.svg)](https://travis-ci.org/fpco/streaming-commons)
 
 Dependencies
 ------------
