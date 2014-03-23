@@ -17,18 +17,32 @@ cabal-version:       >=1.8
 extra-source-files:
     test/filesystem/*.txt
     test/filesystem/bin/*.txt
-    cbits/*.h
+    include/*.h
+    cbits/*.c
     test/LICENSE.gz
 
 library
   exposed-modules:     Data.Streaming.Filesystem
+                       Data.Streaming.Text
                        Data.Streaming.Zlib
                        Data.Streaming.Zlib.Lowlevel
+
+  -- Due to cabal bugs, not making inclusion of this dependent on text version.
+  -- For more information, see: https://github.com/fpco/text-stream-decode/issues/1
+  other-modules:       Data.Text.Internal.Unsafe.Char
+                       Data.Text.Internal.Unsafe.Shift
+                       Data.Text.Internal.Encoding.Utf8
+                       Data.Text.Internal.Encoding.Utf16
+                       Data.Text.Internal.Encoding.Utf32
+
   build-depends:       base >= 4 && < 5
                      , bytestring
+                     , text
                      , zlib
 
   c-sources:           cbits/zlib-helper.c
+                       cbits/text-helper.c
+  include-dirs:        include
 
   if os(windows)
     build-depends:     Win32
@@ -43,6 +57,7 @@ test-suite test
     type:           exitcode-stdio-1.0
     ghc-options:    -Wall -threaded
     other-modules:  Data.Streaming.FilesystemSpec
+                    Data.Streaming.TextSpec
                     Data.Streaming.ZlibSpec
     build-depends:  base
                   , streaming-commons
@@ -50,7 +65,30 @@ test-suite test
 
                   , QuickCheck
                   , bytestring
+                  , deepseq
+                  , text
                   , zlib
+
+benchmark count-chars
+    type: exitcode-stdio-1.0
+    hs-source-dirs: bench
+    build-depends:  base
+                  , text-stream-decode
+                  , criterion
+                  , bytestring
+                  , text
+    main-is:        count-chars.hs
+    ghc-options:    -Wall -O2
+
+benchmark decode-memory-usage
+    type: exitcode-stdio-1.0
+    hs-source-dirs: bench
+    build-depends:  base
+                  , text-stream-decode
+                  , bytestring
+                  , text
+    main-is:        decode-memory-usage.hs
+    ghc-options:    -Wall -O2 -with-rtsopts=-s
 
 source-repository head
   type:     git
