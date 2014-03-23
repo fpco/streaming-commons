@@ -8,13 +8,33 @@ module Data.Streaming.Filesystem
     ) where
 
 #if WINDOWS
-#error "Need to write Windows code"
+
+import qualified System.Win32 as Win32
+import System.FilePath ((</>))
+import Data.IORef (IORef, newIORef, readIORef, writeIORef)
+
+data DirStream = DirStream !Win32.HANDLE !Win32.FindData !(IORef Bool)
 
 openDirStream :: FilePath -> IO DirStream
-openDirStream = undefined
+openDirStream fp = do
+    (h, fdat) <- Win32.findFirstFile $ fp </> "*"
+    imore <- newIORef True -- always at least two records, "." and ".."
+    return $! DirStream h fdat imore
 
 closeDirStream :: DirStream -> IO ()
-closeDirStream = undefined
+closeDirStream (DirStream h _ _) = Win32.findClose h
+
+readDirStream :: DirStream -> IO (Maybe FilePath)
+readDirStream ds@(DirStream h fdat imore) = do
+    more <- readIORef imore
+    if more
+        then do
+            filename <- Win32.getFindDataFileName fdat
+            Win32.findNextFile h fdat >>= writeIORef imore
+            if filename == "." || filename == ".."
+                then readDirStream ds
+                else return $ Just filename
+        else return Nothing
 
 #else
 
