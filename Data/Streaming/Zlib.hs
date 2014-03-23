@@ -38,6 +38,7 @@ module Data.Streaming.Zlib
     , defaultWindowBits
     , ZlibException (..)
     , Popper
+    , PopperRes (..)
     ) where
 
 import Data.Streaming.Zlib.Lowlevel
@@ -49,7 +50,7 @@ import qualified Data.ByteString as S
 import Data.ByteString.Lazy.Internal (defaultChunkSize)
 import Control.Monad (when)
 import Data.Typeable (Typeable)
-import Control.Exception (Exception, throwIO)
+import Control.Exception (Exception)
 
 type ZStreamPair = (ForeignPtr ZStreamStruct, ForeignPtr CChar)
 
@@ -179,7 +180,7 @@ feedInflate (Inflate ((fzstr, fbuff), inflateDictionary)) bs = do
     inflate zstr = do
         res <- c_call_inflate_noflush zstr
         if (res == zNeedDict)
-            then maybe (throwIO $ ZlibException $ fromIntegral zNeedDict) -- no dictionary supplied so throw error
+            then maybe (return zNeedDict)
                        (\dict -> (unsafeUseAsCStringLen dict $ \(cstr, len) -> do
                                     c_call_inflate_set_dictionary zstr cstr $ fromIntegral len
                                     c_call_inflate_noflush zstr))
@@ -188,7 +189,12 @@ feedInflate (Inflate ((fzstr, fbuff), inflateDictionary)) bs = do
 
 -- | An IO action that returns the next chunk of data, returning 'Nothing' when
 -- there is no more data to be popped.
-type Popper = IO (Maybe S.ByteString)
+type Popper = IO PopperRes
+
+data PopperRes = PRDone
+               | PRNext !S.ByteString
+               | PRError !ZlibException
+    deriving (Show, Typeable)
 
 -- | Ensure that the given @ByteString@ is not deallocated.
 keepAlive :: Maybe S.ByteString -> IO a -> IO a
@@ -203,18 +209,19 @@ drain :: ForeignPtr CChar
       -> Popper
 drain fbuff fzstr mbs func isFinish = withForeignPtr fzstr $ \zstr -> keepAlive mbs $ do
     res <- func zstr
-    when (res < 0 && res /= zBufError)
-        $ throwIO $ ZlibException $ fromIntegral res
-    avail <- c_get_avail_out zstr
-    let size = defaultChunkSize - fromIntegral avail
-        toOutput = avail == 0 || (isFinish && size /= 0)
-    if toOutput
-        then withForeignPtr fbuff $ \buff -> do
-            bs <- S.packCStringLen (buff, size)
-            c_set_avail_out zstr buff
-                $ fromIntegral defaultChunkSize
-            return $ Just bs
-        else return Nothing
+    if res < 0 && res /= zBufError
+        then return $ PRError $ ZlibException $ fromIntegral res
+        else do
+            avail <- c_get_avail_out zstr
+            let size = defaultChunkSize - fromIntegral avail
+                toOutput = avail == 0 || (isFinish && size /= 0)
+            if toOutput
+                then withForeignPtr fbuff $ \buff -> do
+                    bs <- S.packCStringLen (buff, size)
+                    c_set_avail_out zstr buff
+                        $ fromIntegral defaultChunkSize
+                    return $ PRNext bs
+                else return PRDone
 
 
 -- | As explained in 'feedInflate', inflation buffers your decompressed

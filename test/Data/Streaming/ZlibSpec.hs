@@ -28,8 +28,8 @@ decompress' gziped = unsafePerformIO $ do
     go front x = do
         y <- x
         case y of
-            Nothing -> return front
-            Just z -> go (front . (:) z) x
+            PRDone -> return front
+            PRNext z -> go (front . (:) z) x
 
 instance Arbitrary L.ByteString where
     arbitrary = L.fromChunks `fmap` arbitrary
@@ -47,8 +47,8 @@ compress' raw = unsafePerformIO $ do
     go front x = do
         y <- x
         case y of
-            Nothing -> return front
-            Just z -> go (front . (:) z) x
+            PRDone -> return front
+            PRNext z -> go (front . (:) z) x
 
 license :: S.ByteString
 license = S8.filter (/= '\r') $ unsafePerformIO $ S.readFile "LICENSE"
@@ -67,8 +67,8 @@ deflateWithDict dict raw = unsafePerformIO $ do
     go front x = do
         y <- x
         case y of
-            Nothing -> return front
-            Just z -> go (front . (:) z) x
+            PRDone -> return front
+            PRNext z -> go (front . (:) z) x
 
 inflateWithDict :: S.ByteString -> L.ByteString -> L.ByteString
 inflateWithDict dict compressed = unsafePerformIO $ do
@@ -81,8 +81,8 @@ inflateWithDict dict compressed = unsafePerformIO $ do
     go front x = do
         y <- x
         case y of
-            Nothing -> return front
-            Just z -> go (front . (:) z) x
+            PRDone -> return front
+            PRNext z -> go (front . (:) z) x
 
 spec :: Spec
 spec = describe "Data.Streaming.Zlib" $ do
@@ -104,8 +104,8 @@ spec = describe "Data.Streaming.Zlib" $ do
             let go front x = do
                     y <- x
                     case y of
-                        Nothing -> return front
-                        Just z -> go (front . (:) z) x
+                        PRDone -> return front
+                        PRNext z -> go (front . (:) z) x
             def <- initDeflate 8 $ WindowBits 31
             gziped <- feedDeflate def license >>= go id
             gziped' <- go gziped $ finishDeflate def
@@ -116,8 +116,8 @@ spec = describe "Data.Streaming.Zlib" $ do
             let go front x = do
                     y <- x
                     case y of
-                        Nothing -> return front
-                        Just z -> go (front . (:) z) x
+                        PRDone -> return front
+                        PRNext z -> go (front . (:) z) x
             gziped <- S.readFile "test/LICENSE.gz"
             inf <- initInflate $ WindowBits 31
             popper <- feedInflate inf gziped
@@ -130,8 +130,8 @@ spec = describe "Data.Streaming.Zlib" $ do
                 go front x = do
                     y <- x
                     case y of
-                        Nothing -> return front
-                        Just z -> go (front . (:) z) x
+                        PRDone -> return front
+                        PRNext z -> go (front . (:) z) x
             def <- initDeflate 5 $ WindowBits 31
             gziped <- foldM (go' def) id $ map S.singleton $ S.unpack license
             gziped' <- go gziped $ finishDeflate def
@@ -143,8 +143,8 @@ spec = describe "Data.Streaming.Zlib" $ do
                 go front x = do
                     y <- x
                     case y of
-                        Nothing -> return front
-                        Just z -> go (front . (:) z) x
+                        PRDone -> return front
+                        PRNext z -> go (front . (:) z) x
             gziped <- S.readFile "test/LICENSE.gz"
             let gziped' = map S.singleton $ S.unpack gziped
             inf <- initInflate $ WindowBits 31
@@ -159,8 +159,8 @@ spec = describe "Data.Streaming.Zlib" $ do
                 go front x = do
                     y <- x
                     case y of
-                        Nothing -> return front
-                        Just z -> go (front . (:) z) x
+                        PRDone -> return front
+                        PRNext z -> go (front . (:) z) x
             inf <- initInflate defaultWindowBits
             inflated <- foldM (go' inf) id $ L.toChunks glbs
             final <- finishInflate inf
@@ -170,8 +170,8 @@ spec = describe "Data.Streaming.Zlib" $ do
                 go front x = do
                     y <- x
                     case y of
-                        Nothing -> return front
-                        Just z -> go (front . (:) z) x
+                        PRDone -> return front
+                        PRNext z -> go (front . (:) z) x
             def <- initDeflate 7 defaultWindowBits
             deflated <- foldM (go' def) id $ L.toChunks lbs
             deflated' <- go deflated $ finishDeflate def
@@ -186,8 +186,8 @@ spec = describe "Data.Streaming.Zlib" $ do
                 let popList pop = do
                         mx <- pop
                         case mx of
-                            Nothing -> return []
-                            Just x -> do
+                            PRDone -> return []
+                            PRNext x -> do
                                 xs <- popList pop
                                 return $ x : xs
 
@@ -233,8 +233,8 @@ decompressRaw gziped = do
     go front x = do
         y <- x
         case y of
-            Nothing -> return front
-            Just z -> go (front . (:) z) x
+            PRDone -> return front
+            PRNext z -> go (front . (:) z) x
 
 compressRaw :: L.ByteString -> IO L.ByteString
 compressRaw raw = do
@@ -247,5 +247,5 @@ compressRaw raw = do
     go front x = do
         y <- x
         case y of
-            Nothing -> return front
-            Just z -> go (front . (:) z) x
+            PRDone -> return front
+            PRNext z -> go (front . (:) z) x
