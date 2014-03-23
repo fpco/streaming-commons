@@ -77,6 +77,11 @@ test-suite test
                   , text
                   , zlib
 
+  if os(windows)
+    cpp-options:       -DWINDOWS
+  else
+    build-depends:     unix
+
 benchmark count-chars
     type: exitcode-stdio-1.0
     hs-source-dirs: bench
