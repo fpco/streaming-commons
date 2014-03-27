@@ -97,7 +97,7 @@ getText j marr = do
 
 #include "text_cbits.h"
 
-foreign import ccall unsafe "_hs_text_stream_decode_decode_utf8_state" c_decode_utf8_with_state
+foreign import ccall unsafe "_hs_streaming_commons_decode_utf8_state" c_decode_utf8_with_state
     :: MutableByteArray# s -> Ptr CSize
     -> Ptr (Ptr Word8) -> Ptr Word8
     -> Ptr CodePoint -> Ptr DecoderState -> IO (Ptr Word8)
