@@ -21,6 +21,7 @@ import Network.Socket (Socket, SockAddr)
 data ServerSettings = ServerSettings
     { serverPort :: !Int
     , serverHost :: !HostPreference
+    , serverSocket :: !(Maybe Socket) -- ^ listening socket
     , serverAfterBind :: !(Socket -> IO ())
     , serverNeedLocalAddr :: !Bool
     }

@@ -1,5 +1,5 @@
 name:                streaming-commons
-version:             0.1.0.2
+version:             0.1.1
 synopsis:            Common lower-level functions needed by various streaming data libraries
 description:         Provides low-dependency functionality commonly needed by various streaming data libraries, such as conduit and pipes.
 homepage:            https://github.com/fpco/streaming-commons
@@ -36,6 +36,7 @@ library
                        Data.Text.Internal.Encoding.Utf32
 
   build-depends:       base >= 4 && < 5
+                     , array
                      , bytestring
                      , directory
                      , network
@@ -62,6 +63,7 @@ test-suite test
     ghc-options:    -Wall -threaded
     other-modules:  Data.Streaming.FileReadSpec
                     Data.Streaming.FilesystemSpec
+                    Data.Streaming.NetworkSpec
                     Data.Streaming.TextSpec
                     Data.Streaming.ZlibSpec
     build-depends:  base
@@ -69,8 +71,11 @@ test-suite test
                   , hspec >= 1.8
 
                   , QuickCheck
+                  , array
+                  , async
                   , bytestring
                   , deepseq
+                  , network
                   , text
                   , zlib
 

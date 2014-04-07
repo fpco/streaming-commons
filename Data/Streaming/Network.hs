@@ -14,6 +14,7 @@ module Data.Streaming.Network
 #endif
       -- ** Smart constructors
     , serverSettingsTCP
+    , serverSettingsTCPSocket
     , clientSettingsTCP
     , serverSettingsUDP
     , clientSettingsUDP
@@ -52,10 +53,14 @@ module Data.Streaming.Network
       -- * Functions
       -- ** General
     , bindPortGen
+    , bindRandomPortGen
     , getSocketGen
     , acceptSafe
+    , unassignedPorts
+    , getUnassignedPort
       -- ** TCP
     , bindPortTCP
+    , bindRandomPortTCP
     , getSocketTCP
     , safeRecv
     , runTCPServer
@@ -64,6 +69,7 @@ module Data.Streaming.Network
     , runTCPServerWithHandle
       -- ** UDP
     , bindPortUDP
+    , bindRandomPortUDP
     , getSocketUDP
 #if !WINDOWS
       -- ** Unix
@@ -89,6 +95,9 @@ import Data.Functor.Constant (Constant (Constant, getConstant))
 import Data.Functor.Identity (Identity (Identity, runIdentity))
 import Control.Concurrent (forkIO)
 import Control.Monad (forever)
+import Data.IORef (IORef, newIORef, atomicModifyIORef)
+import Data.Array.Unboxed ((!), UArray, bounds, listArray)
+import System.IO.Unsafe (unsafePerformIO)
 #if WINDOWS
 import Control.Concurrent.MVar (putMVar, takeMVar, newEmptyMVar)
 #endif
@@ -157,6 +166,62 @@ bindPortGen sockettype p s = do
           )
     tryAddrs addrs'
 
+-- | Bind to a random port number. Especially useful for writing network tests.
+--
+-- This will attempt 30 different port numbers before giving up and throwing an
+-- exception.
+--
+-- Since 0.1.1
+bindRandomPortGen :: SocketType -> HostPreference -> IO (Int, Socket)
+bindRandomPortGen sockettype s = do
+    loop 30
+  where
+    loop cnt | cnt <= 0 = error "Data.Streaming.Network.bindRandomPortGen: Could not get port"
+    loop cnt = do
+        port <- getUnassignedPort
+        esocket <- try $ bindPortGen sockettype port s
+        case esocket :: Either IOException Socket of
+            Left _ -> loop (cnt - 1)
+            Right socket -> return (port, socket)
+
+-- | Top 10 Largest IANA unassigned port ranges with no unauthorized uses known
+unassignedPortsList :: [Int]
+unassignedPortsList = concat
+    [ [43124..44320]
+    , [28120..29166]
+    , [45967..46997]
+    , [28241..29117]
+    , [40001..40840]
+    , [29170..29998]
+    , [38866..39680]
+    , [43442..44122]
+    , [41122..41793]
+    , [35358..36000]
+    ]
+
+unassignedPorts :: UArray Int Int
+unassignedPorts = listArray (unassignedPortsMin, unassignedPortsMax) unassignedPortsList
+
+unassignedPortsMin, unassignedPortsMax :: Int
+unassignedPortsMin = 1
+unassignedPortsMax = length unassignedPortsList
+
+nextUnusedPort :: IORef Int
+nextUnusedPort = unsafePerformIO $ newIORef unassignedPortsMin
+{-# NOINLINE nextUnusedPort #-}
+
+-- | Get a port from the IANA list of unassigned ports.
+--
+-- Internally, this function uses an @IORef@ to cycle through the list of ports
+getUnassignedPort :: IO Int
+getUnassignedPort = do
+    port <- atomicModifyIORef nextUnusedPort go
+    return $! port
+  where
+    go i
+        | i > unassignedPortsMax = (succ unassignedPortsMin, unassignedPorts ! unassignedPortsMin)
+        | otherwise = (succ i, unassignedPorts ! i)
+
 -- | Attempt to connect to the given host/port.
 getSocketUDP :: String -> Int -> IO (Socket, AddrInfo)
 getSocketUDP = getSocketGen NS.Datagram
@@ -165,6 +230,14 @@ getSocketUDP = getSocketGen NS.Datagram
 -- given, will use the first address available.
 bindPortUDP :: Int -> HostPreference -> IO Socket
 bindPortUDP = bindPortGen NS.Datagram
+
+-- | Bind a random UDP port.
+--
+-- See 'bindRandomPortGen'
+--
+-- Since 0.1.1
+bindRandomPortUDP :: HostPreference -> IO (Int, Socket)
+bindRandomPortUDP = bindRandomPortGen NS.Datagram
 
 #if !WINDOWS
 -- | Attempt to connect to the given Unix domain socket path.
@@ -250,6 +323,20 @@ serverSettingsTCP
 serverSettingsTCP port host = ServerSettings
     { serverPort = port
     , serverHost = host
+    , serverSocket = Nothing
+    , serverAfterBind = const $ return ()
+    , serverNeedLocalAddr = False
+    }
+
+-- | Create a server settings that uses an already available listening socket.
+-- Any port and host modifications made to this value will be ignored.
+--
+-- Since 0.1.1
+serverSettingsTCPSocket :: Socket -> ServerSettings
+serverSettingsTCPSocket lsocket = ServerSettings
+    { serverPort = 0
+    , serverHost = HostAny
+    , serverSocket = Just lsocket
     , serverAfterBind = const $ return ()
     , serverNeedLocalAddr = False
     }
@@ -293,6 +380,17 @@ bindPortTCP p s = do
     sock <- bindPortGen NS.Stream p s
     NS.listen sock (max 2048 NS.maxListenQueue)
     return sock
+
+-- | Bind a random TCP port.
+--
+-- See 'bindRandomPortGen'.
+--
+-- Since 0.1.1
+bindRandomPortTCP :: HostPreference -> IO (Int, Socket)
+bindRandomPortTCP s = do
+    (port, sock) <- bindRandomPortGen NS.Stream s
+    NS.listen sock (max 2048 NS.maxListenQueue)
+    return (port, sock)
 
 -- | Try to accept a connection, recovering automatically from exceptions.
 --
@@ -381,14 +479,12 @@ setAfterBind p = runIdentity . afterBindLens (const (Identity p))
 type ConnectionHandle = Socket -> NS.SockAddr -> Maybe NS.SockAddr -> IO ()
 
 runTCPServerWithHandle :: ServerSettings -> ConnectionHandle -> IO ()
-runTCPServerWithHandle (ServerSettings port host afterBind needLocalAddr) handle =
-    E.bracket
-        (bindPortTCP port host)
-        NS.sClose
-        (\socket -> do
-            afterBind socket
-            forever $ serve socket)
+runTCPServerWithHandle (ServerSettings port host msocket afterBind needLocalAddr) handle =
+    case msocket of
+        Nothing -> E.bracket (bindPortTCP port host) NS.sClose inner
+        Just lsocket -> inner lsocket
   where
+    inner lsocket = afterBind lsocket >> forever (serve lsocket)
     serve lsocket = E.bracketOnError
         (acceptSafe lsocket)
         (\(socket, _) -> NS.sClose socket)
