@@ -1,5 +1,5 @@
 name:                streaming-commons
-version:             0.1.1
+version:             0.1.2
 synopsis:            Common lower-level functions needed by various streaming data libraries
 description:         Provides low-dependency functionality commonly needed by various streaming data libraries, such as conduit and pipes.
 homepage:            https://github.com/fpco/streaming-commons
@@ -19,7 +19,8 @@ extra-source-files:
     test/LICENSE.gz
 
 library
-  exposed-modules:     Data.Streaming.FileRead
+  exposed-modules:     Data.Streaming.Blaze
+                       Data.Streaming.FileRead
                        Data.Streaming.Filesystem
                        Data.Streaming.Network
                        Data.Streaming.Network.Internal
@@ -37,6 +38,7 @@ library
 
   build-depends:       base >= 4 && < 5
                      , array
+                     , blaze-builder >= 0.3 && < 0.4
                      , bytestring
                      , directory
                      , network
@@ -73,6 +75,7 @@ test-suite test
                   , QuickCheck
                   , array
                   , async
+                  , blaze-builder
                   , bytestring
                   , deepseq
                   , network
