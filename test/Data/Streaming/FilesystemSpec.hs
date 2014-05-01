@@ -43,6 +43,18 @@ spec = describe "Data.Streaming.Filesystem" $ do
             ft <- getFileType "tmp"
             _ <- tryIO $ removeLink "tmp"
             ft `shouldBe` FTOther
+        it "recursive symlink is other" $ do
+            _ <- tryIO $ removeLink "tmp"
+            createSymbolicLink "tmp" "tmp"
+            ft <- getFileType "tmp"
+            _ <- tryIO $ removeLink "tmp"
+            ft `shouldBe` FTOther
+        it "dangling symlink is other" $ do
+            _ <- tryIO $ removeLink "tmp"
+            createSymbolicLink "doesnotexist" "tmp"
+            ft <- getFileType "tmp"
+            _ <- tryIO $ removeLink "tmp"
+            ft `shouldBe` FTOther
 
 tryIO :: IO a -> IO (Either IOException a)
 tryIO = try

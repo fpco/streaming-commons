@@ -1,5 +1,6 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 -- | Streaming functions for interacting with the filesystem.
 module Data.Streaming.Filesystem
     ( DirStream
@@ -60,6 +61,7 @@ getFileType fp = do
 import System.Posix.Directory (DirStream, openDirStream, closeDirStream)
 import qualified System.Posix.Directory as Posix
 import qualified System.Posix.Files as PosixF
+import Control.Exception (try, IOException)
 
 readDirStream :: DirStream -> IO (Maybe FilePath)
 readDirStream ds = do
@@ -78,9 +80,10 @@ getFileType fp = do
             | PosixF.isRegularFile s -> return FTFile
             | PosixF.isDirectory s -> return FTDirectory
             | PosixF.isSymbolicLink s -> do
-                s' <- PosixF.getFileStatus fp
-                case () of
-                    ()
+                es' <- try $ PosixF.getFileStatus fp
+                case es' of
+                    Left (_ :: IOException) -> return FTOther
+                    Right s'
                         | PosixF.isRegularFile s' -> return FTFileSym
                         | PosixF.isDirectory s' -> return FTDirectorySym
                         | otherwise -> return FTOther
