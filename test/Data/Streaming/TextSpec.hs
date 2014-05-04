@@ -19,7 +19,7 @@ try' :: NFData a => a -> IO (Either SomeException a)
 try' a = try $ evaluate (a `deepseq` a)
 
 spec :: Spec
-spec = describe "Data.Streaming.TextSpec" $ modifyMaxSuccess (const 10000) $ do
+spec = describe "Data.Streaming.TextSpec" $ {-modifyMaxSuccess (const 10000) $ -}do
     let test name lazy stream encodeLazy encodeStrict = describe name $ do
             prop "bytes" $ check lazy stream
             prop "chars" $ \css -> do
@@ -29,7 +29,7 @@ spec = describe "Data.Streaming.TextSpec" $ modifyMaxSuccess (const 10000) $ do
                     bss = L.toChunks lbs
                     wss = map S.unpack bss
                  in check lazy stream wss
-            it "high code points" $ forM_ [10, 20..50000] $ \cnt -> do
+            it "high code points" $ forM_ [100, 200..50000] $ \cnt -> do
                 let t = T.replicate cnt "\x10000"
                     bs = encodeStrict t
                 case stream bs of
