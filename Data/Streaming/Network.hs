@@ -91,8 +91,8 @@ import qualified Data.ByteString.Char8 as S8
 import qualified Control.Exception as E
 import Data.ByteString (ByteString)
 import System.Directory (removeFile)
-import Data.Functor.Constant (Constant (Constant, getConstant))
-import Data.Functor.Identity (Identity (Identity, runIdentity))
+import Data.Functor.Constant (Constant (Constant), getConstant)
+import Data.Functor.Identity (Identity (Identity), runIdentity)
 import Control.Concurrent (forkIO)
 import Control.Monad (forever)
 import Data.IORef (IORef, newIORef, atomicModifyIORef)
