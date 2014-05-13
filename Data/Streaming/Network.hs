@@ -98,6 +98,7 @@ import Control.Monad (forever)
 import Data.IORef (IORef, newIORef, atomicModifyIORef)
 import Data.Array.Unboxed ((!), UArray, bounds, listArray)
 import System.IO.Unsafe (unsafePerformIO)
+import System.Random (randomRIO)
 #if WINDOWS
 import Control.Concurrent.MVar (putMVar, takeMVar, newEmptyMVar)
 #endif
@@ -207,7 +208,8 @@ unassignedPortsMin = 1
 unassignedPortsMax = length unassignedPortsList
 
 nextUnusedPort :: IORef Int
-nextUnusedPort = unsafePerformIO $ newIORef unassignedPortsMin
+nextUnusedPort = unsafePerformIO
+               $ randomRIO (unassignedPortsMin, unassignedPortsMax) >>= newIORef
 {-# NOINLINE nextUnusedPort #-}
 
 -- | Get a port from the IANA list of unassigned ports.
