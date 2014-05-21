@@ -57,6 +57,7 @@ module Data.Streaming.Network
     , bindPortGen
     , bindRandomPortGen
     , getSocketGen
+    , getSocketFamilyGen
     , acceptSafe
     , unassignedPorts
     , getUnassignedPort
@@ -64,6 +65,7 @@ module Data.Streaming.Network
     , bindPortTCP
     , bindRandomPortTCP
     , getSocketTCP
+    , getSocketFamilyTCP
     , safeRecv
     , runTCPServer
     , runTCPClient
@@ -105,9 +107,9 @@ import System.Random (randomRIO)
 import Control.Concurrent.MVar (putMVar, takeMVar, newEmptyMVar)
 #endif
 
--- | Attempt to connect to the given host/port using given @SocketType@.
-getSocketGen :: SocketType -> String -> Int -> NS.Family -> IO (Socket, AddrInfo)
-getSocketGen sockettype host' port' af = do
+-- | Attempt to connect to the given host/port/address family using given @SocketType@.
+getSocketFamilyGen :: SocketType -> String -> Int -> NS.Family -> IO (Socket, AddrInfo)
+getSocketFamilyGen sockettype host' port' af = do
     let hints = NS.defaultHints {
                           NS.addrFlags = [NS.AI_ADDRCONFIG]
                         , NS.addrSocketType = sockettype
@@ -117,6 +119,9 @@ getSocketGen sockettype host' port' af = do
     sock <- NS.socket (NS.addrFamily addr) (NS.addrSocketType addr)
                       (NS.addrProtocol addr)
     return (sock, addr)
+
+getSocketGen :: SocketType -> String -> Int -> IO (Socket, AddrInfo)
+getSocketGen sockettype host port = getSocketFamilyGen sockettype host port NS.AF_UNSPEC
 
 -- | Attempt to bind a listening @Socket@ on the given host/port using given
 -- @SocketType@. If no host is given, will use the first address available.
@@ -228,7 +233,7 @@ getUnassignedPort = do
         | otherwise = (succ i, unassignedPorts ! i)
 
 -- | Attempt to connect to the given host/port.
-getSocketUDP :: String -> Int -> NS.Family -> IO (Socket, AddrInfo)
+getSocketUDP :: String -> Int -> IO (Socket, AddrInfo)
 getSocketUDP = getSocketGen NS.Datagram
 
 -- | Attempt to bind a listening @Socket@ on the given host/port. If no host is
@@ -364,10 +369,10 @@ clientSettingsTCP port host = ClientSettings
     , clientAddrFamily = NS.AF_UNSPEC
     }
 
--- | Attempt to connect to the given host/port.
-getSocketTCP :: ByteString -> Int -> NS.Family -> IO (NS.Socket, NS.SockAddr)
-getSocketTCP host' port' addrFamily = do
-    (sock, addr) <- getSocketGen NS.Stream (S8.unpack host') port' addrFamily
+-- | Attempt to connect to the given host/port/address family.
+getSocketFamilyTCP :: ByteString -> Int -> NS.Family -> IO (NS.Socket, NS.SockAddr)
+getSocketFamilyTCP host' port' addrFamily = do
+    (sock, addr) <- getSocketFamilyGen NS.Stream (S8.unpack host') port' addrFamily
     ee <- try' $ NS.connect sock (NS.addrAddress addr)
     case ee of
         Left e -> NS.sClose sock >> throwIO e
@@ -375,6 +380,9 @@ getSocketTCP host' port' addrFamily = do
   where
     try' :: IO a -> IO (Either SomeException a)
     try' = try
+
+getSocketTCP :: ByteString -> Int -> IO (NS.Socket, NS.SockAddr)
+getSocketTCP host port = getSocketFamilyTCP host port NS.AF_UNSPEC
 
 -- | Attempt to bind a listening @Socket@ on the given host/port. If no host is
 -- given, will use the first address available.
@@ -529,7 +537,7 @@ runTCPServer settings app = runTCPServerWithHandle settings app'
 -- | Run an @Application@ by connecting to the specified server.
 runTCPClient :: ClientSettings -> (AppData -> IO a) -> IO a
 runTCPClient (ClientSettings port host addrFamily) app = E.bracket
-    (getSocketTCP host port addrFamily)
+    (getSocketFamilyTCP host port addrFamily)
     (NS.sClose . fst)
     (\(s, address) -> app AppData
         { appRead' = safeRecv s 4096
