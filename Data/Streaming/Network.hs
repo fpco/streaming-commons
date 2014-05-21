@@ -108,6 +108,8 @@ import Control.Concurrent.MVar (putMVar, takeMVar, newEmptyMVar)
 #endif
 
 -- | Attempt to connect to the given host/port/address family using given @SocketType@.
+--
+-- Since 0.1.3
 getSocketFamilyGen :: SocketType -> String -> Int -> NS.Family -> IO (Socket, AddrInfo)
 getSocketFamilyGen sockettype host' port' af = do
     let hints = NS.defaultHints {
@@ -120,6 +122,7 @@ getSocketFamilyGen sockettype host' port' af = do
                       (NS.addrProtocol addr)
     return (sock, addr)
 
+-- | Attempt to connect to the given host/port using given @SocketType@.
 getSocketGen :: SocketType -> String -> Int -> IO (Socket, AddrInfo)
 getSocketGen sockettype host port = getSocketFamilyGen sockettype host port NS.AF_UNSPEC
 
@@ -370,6 +373,8 @@ clientSettingsTCP port host = ClientSettings
     }
 
 -- | Attempt to connect to the given host/port/address family.
+--
+-- Since 0.1.3
 getSocketFamilyTCP :: ByteString -> Int -> NS.Family -> IO (NS.Socket, NS.SockAddr)
 getSocketFamilyTCP host' port' addrFamily = do
     (sock, addr) <- getSocketFamilyGen NS.Stream (S8.unpack host') port' addrFamily
@@ -381,6 +386,7 @@ getSocketFamilyTCP host' port' addrFamily = do
     try' :: IO a -> IO (Either SomeException a)
     try' = try
 
+-- | Attempt to connect to the given host/port.
 getSocketTCP :: ByteString -> Int -> IO (NS.Socket, NS.SockAddr)
 getSocketTCP host port = getSocketFamilyTCP host port NS.AF_UNSPEC
 
@@ -454,9 +460,15 @@ setHost hp ss = ss { clientHost = hp }
 getHost :: ClientSettings -> ByteString
 getHost = clientHost
 
+-- | Set the address family for the given settings.
+--
+-- Since 0.1.3
 setAddrFamily :: NS.Family -> ClientSettings -> ClientSettings
 setAddrFamily af cs = cs { clientAddrFamily = af }
 
+-- | Get the address family for the given settings.
+--
+-- Since 0.1.3
 getAddrFamily :: ClientSettings -> NS.Family
 getAddrFamily = clientAddrFamily
 
