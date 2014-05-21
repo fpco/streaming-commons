@@ -33,6 +33,7 @@ module Data.Streaming.Network
       -- ** Setters
     , setPort
     , setHost
+    , setAddrFamily
     , setAfterBind
     , setNeedLocalAddr
 #if !WINDOWS
@@ -41,6 +42,7 @@ module Data.Streaming.Network
       -- ** Getters
     , getPort
     , getHost
+    , getAddrFamily
     , getAfterBind
     , getNeedLocalAddr
 #if !WINDOWS
@@ -104,11 +106,12 @@ import Control.Concurrent.MVar (putMVar, takeMVar, newEmptyMVar)
 #endif
 
 -- | Attempt to connect to the given host/port using given @SocketType@.
-getSocketGen :: SocketType -> String -> Int -> IO (Socket, AddrInfo)
-getSocketGen sockettype host' port' = do
+getSocketGen :: SocketType -> String -> Int -> NS.Family -> IO (Socket, AddrInfo)
+getSocketGen sockettype host' port' af = do
     let hints = NS.defaultHints {
                           NS.addrFlags = [NS.AI_ADDRCONFIG]
                         , NS.addrSocketType = sockettype
+                        , NS.addrFamily = af
                         }
     (addr:_) <- NS.getAddrInfo (Just hints) (Just host') (Just $ show port')
     sock <- NS.socket (NS.addrFamily addr) (NS.addrSocketType addr)
@@ -225,7 +228,7 @@ getUnassignedPort = do
         | otherwise = (succ i, unassignedPorts ! i)
 
 -- | Attempt to connect to the given host/port.
-getSocketUDP :: String -> Int -> IO (Socket, AddrInfo)
+getSocketUDP :: String -> Int -> NS.Family -> IO (Socket, AddrInfo)
 getSocketUDP = getSocketGen NS.Datagram
 
 -- | Attempt to bind a listening @Socket@ on the given host/port. If no host is
@@ -358,12 +361,13 @@ clientSettingsTCP
 clientSettingsTCP port host = ClientSettings
     { clientPort = port
     , clientHost = host
+    , clientAddrFamily = NS.AF_UNSPEC
     }
 
 -- | Attempt to connect to the given host/port.
-getSocketTCP :: ByteString -> Int -> IO (NS.Socket, NS.SockAddr)
-getSocketTCP host' port' = do
-    (sock, addr) <- getSocketGen NS.Stream (S8.unpack host') port'
+getSocketTCP :: ByteString -> Int -> NS.Family -> IO (NS.Socket, NS.SockAddr)
+getSocketTCP host' port' addrFamily = do
+    (sock, addr) <- getSocketGen NS.Stream (S8.unpack host') port' addrFamily
     ee <- try' $ NS.connect sock (NS.addrAddress addr)
     case ee of
         Left e -> NS.sClose sock >> throwIO e
@@ -442,6 +446,12 @@ setHost hp ss = ss { clientHost = hp }
 getHost :: ClientSettings -> ByteString
 getHost = clientHost
 
+setAddrFamily :: NS.Family -> ClientSettings -> ClientSettings
+setAddrFamily af cs = cs { clientAddrFamily = af }
+
+getAddrFamily :: ClientSettings -> NS.Family
+getAddrFamily = clientAddrFamily
+
 #if !WINDOWS
 class HasPath a where
     pathLens :: Functor f => (FilePath -> f FilePath) -> a -> f a
@@ -518,8 +528,8 @@ runTCPServer settings app = runTCPServerWithHandle settings app'
 
 -- | Run an @Application@ by connecting to the specified server.
 runTCPClient :: ClientSettings -> (AppData -> IO a) -> IO a
-runTCPClient (ClientSettings port host) app = E.bracket
-    (getSocketTCP host port)
+runTCPClient (ClientSettings port host addrFamily) app = E.bracket
+    (getSocketTCP host port addrFamily)
     (NS.sClose . fst)
     (\(s, address) -> app AppData
         { appRead' = safeRecv s 4096

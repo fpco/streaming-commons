@@ -14,7 +14,7 @@ module Data.Streaming.Network.Internal
 
 import Data.String (IsString (..))
 import Data.ByteString (ByteString)
-import Network.Socket (Socket, SockAddr)
+import Network.Socket (Socket, SockAddr, Family)
 
 -- | Settings for a TCP server. It takes a port to listen on, and an optional
 -- hostname to bind to.
@@ -30,6 +30,7 @@ data ServerSettings = ServerSettings
 data ClientSettings = ClientSettings
     { clientPort :: !Int
     , clientHost :: !ByteString
+    , clientAddrFamily :: !Family
     }
 
 -- | Which host to bind.
