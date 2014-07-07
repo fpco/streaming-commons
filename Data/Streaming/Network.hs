@@ -1,5 +1,6 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE BangPatterns #-}
 module Data.Streaming.Network
     ( -- * Types
       ServerSettings
@@ -185,15 +186,23 @@ bindPortGen sockettype p s = do
 --
 -- Since 0.1.1
 bindRandomPortGen :: SocketType -> HostPreference -> IO (Int, Socket)
-bindRandomPortGen sockettype s = do
+bindRandomPortGen sockettype s =
     loop 30
   where
-    loop cnt | cnt <= 0 = error "Data.Streaming.Network.bindRandomPortGen: Could not get port"
     loop cnt = do
         port <- getUnassignedPort
         esocket <- try $ bindPortGen sockettype port s
         case esocket :: Either IOException Socket of
-            Left _ -> loop (cnt - 1)
+            Left e
+                | cnt <= 1 -> error $ concat
+                    [ "Data.Streaming.Network.bindRandomPortGen: Could not get port. Last attempted: "
+                    , show port
+                    , ". Exception was: "
+                    , show e
+                    ]
+                | otherwise -> do
+                    skipUnassigned 50
+                    loop $! cnt - 1
             Right socket -> return (port, socket)
 
 -- | Top 10 Largest IANA unassigned port ranges with no unauthorized uses known
@@ -215,8 +224,8 @@ unassignedPorts :: UArray Int Int
 unassignedPorts = listArray (unassignedPortsMin, unassignedPortsMax) unassignedPortsList
 
 unassignedPortsMin, unassignedPortsMax :: Int
-unassignedPortsMin = 1
-unassignedPortsMax = length unassignedPortsList
+unassignedPortsMin = 0
+unassignedPortsMax = length unassignedPortsList - 1
 
 nextUnusedPort :: IORef Int
 nextUnusedPort = unsafePerformIO
@@ -234,6 +243,14 @@ getUnassignedPort = do
     go i
         | i > unassignedPortsMax = (succ unassignedPortsMin, unassignedPorts ! unassignedPortsMin)
         | otherwise = (succ i, unassignedPorts ! i)
+
+-- | Skip ahead in the unassigned ports list by the given number
+skipUnassigned :: Int -> IO ()
+skipUnassigned i = do
+    !() <- atomicModifyIORef nextUnusedPort $ \j ->
+        let k = i + j `mod` unassignedPortsMax
+         in k `seq` (k, ())
+    return ()
 
 -- | Attempt to connect to the given host/port.
 getSocketUDP :: String -> Int -> IO (Socket, AddrInfo)
