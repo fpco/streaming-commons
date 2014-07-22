@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 -- | A full tutorial for this module is available on FP School of Haskell:
 -- <https://www.fpcomplete.com/user/snoyberg/library-documentation/data-conduit-process>.
 --
@@ -29,13 +30,27 @@ import           Control.Applicative             ((<$>), (<*>))
 import           Control.Concurrent              (forkIO)
 import           Control.Concurrent.STM          (STM, TMVar, atomically,
                                                   newEmptyTMVar, putTMVar,
-                                                  readTMVar, tryReadTMVar)
+                                                  readTMVar)
 import           Control.Monad.IO.Class          (MonadIO, liftIO)
 import           Data.Maybe                      (fromMaybe)
 import           Data.Streaming.Process.Internal
 import           System.Exit                     (ExitCode)
 import           System.IO                       (hClose)
 import           System.Process
+
+#if MIN_VERSION_stm(2,3,0)
+import           Control.Concurrent.STM          (tryReadTMVar)
+#else
+import           Control.Concurrent.STM          (tryTakeTMVar, putTMVar)
+
+tryReadTMVar :: TMVar a -> STM (Maybe a)
+tryReadTMVar var = do
+    mx <- tryTakeTMVar var
+    case mx of
+        Nothing -> return ()
+        Just x -> putTMVar var x
+    return mx
+#endif
 
 -- | Use the @Handle@ provided by the @CreateProcess@ value. This would allow
 -- you, for example, to open up a @Handle@ to a file, set it as @std_out@, and
