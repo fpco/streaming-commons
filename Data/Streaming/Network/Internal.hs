@@ -46,6 +46,9 @@ data ClientSettings = ClientSettings
 -- * @*6@ means @HostIPv6@
 --
 -- * @!6@ means @HostIPv6Only@
+--
+-- Any other values is treated as a hostname. As an example, to bind to the
+-- IPv4 local host only, use \"127.0.0.1\".
 data HostPreference =
     HostAny
   | HostIPv4
