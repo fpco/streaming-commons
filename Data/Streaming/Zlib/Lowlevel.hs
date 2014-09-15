@@ -18,6 +18,7 @@ module Data.Streaming.Zlib.Lowlevel
     , c_call_deflate_noflush
     , c_call_deflate_finish
     , c_call_deflate_flush
+    , c_call_deflate_full_flush
     , c_call_deflate_set_dictionary
     , c_call_inflate_set_dictionary
     ) where
@@ -88,6 +89,9 @@ foreign import ccall unsafe "streaming_commons_call_deflate_finish"
 
 foreign import ccall unsafe "streaming_commons_call_deflate_flush"
     c_call_deflate_flush :: ZStream' -> IO CInt
+
+foreign import ccall unsafe "streaming_commons_call_deflate_full_flush"
+    c_call_deflate_full_flush :: ZStream' -> IO CInt
 
 foreign import ccall unsafe "streaming_commons_deflate_set_dictionary"
     c_call_deflate_set_dictionary :: ZStream' -> Ptr CChar -> CUInt -> IO ()

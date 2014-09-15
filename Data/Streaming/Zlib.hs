@@ -33,6 +33,7 @@ module Data.Streaming.Zlib
     , feedDeflate
     , finishDeflate
     , flushDeflate
+    , fullFlushDeflate
       -- * Data types
     , WindowBits (..)
     , defaultWindowBits
@@ -281,3 +282,17 @@ finishDeflate (Deflate (fzstr, fbuff)) =
 flushDeflate :: Deflate -> Popper
 flushDeflate (Deflate (fzstr, fbuff)) =
     drain fbuff fzstr Nothing c_call_deflate_flush True
+
+-- | Full flush the deflation buffer. Useful for interactive
+-- applications where previously streamed data may not be
+-- available. Using `fullFlushDeflate` too often can seriously degrade
+-- compression. Internally this passes Z_FULL_FLUSH to the zlib
+-- library.
+--
+-- Like 'flushDeflate', 'fullFlushDeflate' does not signal end of input,
+-- meaning you can feed more uncompressed data afterward.
+--
+-- Since 0.0.3
+fullFlushDeflate :: Deflate -> Popper
+fullFlushDeflate (Deflate (fzstr, fbuff)) =
+    drain fbuff fzstr Nothing c_call_deflate_full_flush True
