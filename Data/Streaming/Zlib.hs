@@ -292,7 +292,7 @@ flushDeflate (Deflate (fzstr, fbuff)) =
 -- Like 'flushDeflate', 'fullFlushDeflate' does not signal end of input,
 -- meaning you can feed more uncompressed data afterward.
 --
--- Since 0.0.3
+-- Since 0.1.5
 fullFlushDeflate :: Deflate -> Popper
 fullFlushDeflate (Deflate (fzstr, fbuff)) =
     drain fbuff fzstr Nothing c_call_deflate_full_flush True
