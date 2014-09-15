@@ -91,6 +91,11 @@ int streaming_commons_call_deflate_flush (z_stream *stream)
 	return deflate(stream, Z_SYNC_FLUSH);
 }
 
+int streaming_commons_call_deflate_full_flush (z_stream *stream)
+{
+	return deflate(stream, Z_FULL_FLUSH);
+}
+
 int streaming_commons_call_deflate_finish (z_stream *stream)
 {
 	return deflate(stream, Z_FINISH);
