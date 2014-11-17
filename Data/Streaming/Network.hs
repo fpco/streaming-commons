@@ -53,6 +53,7 @@ module Data.Streaming.Network
     , appWrite
     , appSockAddr
     , appLocalAddr
+    , appCloseConnection
       -- * Functions
       -- ** General
     , bindPortGen
@@ -559,6 +560,7 @@ runTCPServer settings app = runTCPServerWithHandle settings app'
                 , appWrite' = sendAll socket
                 , appSockAddr' = addr
                 , appLocalAddr' = mlocal
+                , appCloseConnection' = NS.sClose socket
                 }
           in
             app ad
@@ -573,6 +575,7 @@ runTCPClient (ClientSettings port host addrFamily) app = E.bracket
         , appWrite' = sendAll s
         , appSockAddr' = address
         , appLocalAddr' = Nothing
+        , appCloseConnection' = NS.sClose s
         })
 
 appLocalAddr :: AppData -> Maybe NS.SockAddr
@@ -580,6 +583,13 @@ appLocalAddr = appLocalAddr'
 
 appSockAddr :: AppData -> NS.SockAddr
 appSockAddr = appSockAddr'
+
+-- | Close the underlying connection. One possible use case is simulating
+-- connection failures in a test suite.
+--
+-- Since 0.1.6
+appCloseConnection :: AppData -> IO ()
+appCloseConnection = appCloseConnection'
 
 class HasReadWrite a where
     readLens :: Functor f => (IO ByteString -> f (IO ByteString)) -> a -> f a

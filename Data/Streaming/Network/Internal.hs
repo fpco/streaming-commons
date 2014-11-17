@@ -111,4 +111,5 @@ data AppData = AppData
     , appWrite' :: !(ByteString -> IO ())
     , appSockAddr' :: !SockAddr
     , appLocalAddr' :: !(Maybe SockAddr)
+    , appCloseConnection' :: !(IO ())
     }
