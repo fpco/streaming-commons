@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 -- | A full tutorial for this module is available on FP School of Haskell:
 -- <https://www.fpcomplete.com/user/snoyberg/library-documentation/data-conduit-process>.
 --
@@ -22,6 +23,9 @@ module Data.Streaming.Process
       -- * Type classes
     , InputSource
     , OutputSink
+      -- * Checked processes
+    , withCheckedProcess
+    , ProcessExitedUnsuccessfully (..)
       -- * Reexport
     , module System.Process
     ) where
@@ -31,10 +35,12 @@ import           Control.Concurrent              (forkIO)
 import           Control.Concurrent.STM          (STM, TMVar, atomically,
                                                   newEmptyTMVar, putTMVar,
                                                   readTMVar)
+import           Control.Exception               (Exception, throwIO)
 import           Control.Monad.IO.Class          (MonadIO, liftIO)
 import           Data.Maybe                      (fromMaybe)
 import           Data.Streaming.Process.Internal
-import           System.Exit                     (ExitCode)
+import           Data.Typeable                   (Typeable)
+import           System.Exit                     (ExitCode (ExitSuccess))
 import           System.IO                       (hClose)
 import           System.Process
 
@@ -150,3 +156,42 @@ streamingProcess cp = liftIO $ do
         <*> getStdout stdoutH
         <*> getStderr stderrH
         <*> return (StreamingProcessHandle ph ec)
+
+-- | Indicates that a process exited with an non-success exit code.
+--
+-- Since 0.1.7
+data ProcessExitedUnsuccessfully = ProcessExitedUnsuccessfully CreateProcess ExitCode
+    deriving Typeable
+instance Show ProcessExitedUnsuccessfully where
+    show (ProcessExitedUnsuccessfully cp ec) = concat
+        [ "Process exited with "
+        , show ec
+        , ": "
+        , showCmdSpec (cmdspec cp)
+        ]
+      where
+        showCmdSpec (ShellCommand str) = str
+        showCmdSpec (RawCommand x xs) = unwords (x:xs)
+instance Exception ProcessExitedUnsuccessfully
+
+-- | Run a process and supply its streams to the given callback function. After
+-- the callback completes, wait for the process to complete and check its exit
+-- code. If the exit code is not a success, throw a
+-- 'ProcessExitedUnsuccessfully'.
+--
+-- Since 0.1.7
+withCheckedProcess :: ( InputSource stdin
+                      , OutputSink stderr
+                      , OutputSink stdout
+                      , MonadIO m
+                      )
+                   => CreateProcess
+                   -> (stdin -> stdout -> stderr -> m b)
+                   -> m b
+withCheckedProcess cp f = do
+    (x, y, z, sph) <- streamingProcess cp
+    res <- f x y z
+    ec <- waitForStreamingProcess sph
+    if ec == ExitSuccess
+        then return res
+        else liftIO $ throwIO $ ProcessExitedUnsuccessfully cp ec

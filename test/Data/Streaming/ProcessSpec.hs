@@ -37,6 +37,12 @@ spec = do
         ec <- waitForStreamingProcess cph
         ec `shouldBe` ExitSuccess
 
+    it "checked process" $ do
+        let isRightException ProcessExitedUnsuccessfully {} = True
+        withCheckedProcess (proc "false" [])
+            (\Inherited Inherited Inherited -> return ())
+            `shouldThrow` isRightException
+
 #endif
     it "blocking vs non-blocking" $ do
         (ClosedStream, ClosedStream, ClosedStream, cph) <- streamingProcess (shell "sleep 1")
