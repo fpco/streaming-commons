@@ -466,12 +466,6 @@ getPort = getConstant . portLens Constant
 setPort :: HasPort a => Int -> a -> a
 setPort p = runIdentity . portLens (const (Identity p))
 
-setHostPref :: HostPreference -> ServerSettings -> ServerSettings
-setHostPref hp ss = ss { serverHost = hp }
-
-getHostPref :: ServerSettings -> HostPreference
-getHostPref = serverHost
-
 setHost :: ByteString -> ClientSettings -> ClientSettings
 setHost hp ss = ss { clientHost = hp }
 
