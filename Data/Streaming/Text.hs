@@ -55,7 +55,7 @@ import qualified Data.ByteString.Unsafe            as B
 import           Data.Text                         (Text)
 import qualified Data.Text                         as T
 import qualified Data.Text.Array                   as A
-import           Data.Text.Internal                (textP)
+import           Data.Text.Internal                (text)
 import qualified Data.Text.Internal.Encoding.Utf16 as U16
 import qualified Data.Text.Internal.Encoding.Utf32 as U32
 import qualified Data.Text.Internal.Encoding.Utf8  as U8
@@ -92,7 +92,7 @@ toBS (S3 a b c) = B.pack [a, b, c]
 getText :: Int -> A.MArray s -> ST s Text
 getText j marr = do
     arr <- A.unsafeFreeze marr
-    return $! textP arr 0 j
+    return $! text arr 0 j
 {-# INLINE getText #-}
 
 #include "text_cbits.h"
@@ -138,7 +138,7 @@ decodeUtf8 = decodeChunk B.empty 0 0
               n <- peek destOffPtr
               chunkText <- unsafeSTToIO $ do
                   arr <- A.unsafeFreeze dest
-                  return $! textP arr 0 (fromIntegral n)
+                  return $! text arr 0 (fromIntegral n)
               lastPtr <- peek curPtrPtr
               let left = lastPtr `minusPtr` curPtr
                   -- The logic here is: if any text was generated, then the
