@@ -43,7 +43,10 @@ import           Data.Typeable                   (Typeable)
 import           System.Exit                     (ExitCode (ExitSuccess))
 import           System.IO                       (hClose)
 import           System.Process
+
+#if MIN_VERSION_process(1,2,0)
 import qualified System.Process.Internals        as PI
+#endif
 
 #if MIN_VERSION_stm(2,3,0)
 import           Control.Concurrent.STM          (tryReadTMVar)
@@ -143,7 +146,11 @@ streamingProcess cp = liftIO $ do
         (getStdout, stdoutStream) = osStdStream
         (getStderr, stderrStream) = osStdStream
 
+#if MIN_VERSION_process(1,2,0)
     (stdinH, stdoutH, stderrH, ph) <- PI.createProcess_ "streamingProcess" cp
+#else
+    (stdinH, stdoutH, stderrH, ph) <- createProcess cp
+#endif
         { std_in = fromMaybe (std_in cp) stdinStream
         , std_out = fromMaybe (std_out cp) stdoutStream
         , std_err = fromMaybe (std_err cp) stderrStream
