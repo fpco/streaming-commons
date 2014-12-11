@@ -105,7 +105,7 @@ foreign import ccall unsafe "_hs_streaming_commons_decode_utf8_state" c_decode_u
 newtype CodePoint = CodePoint Word32 deriving (Eq, Show, Num, Storable)
 newtype DecoderState = DecoderState Word32 deriving (Eq, Show, Num, Storable)
 
--- | /O(n)/ Convert a lazy 'ByteString' into a 'Stream Char', using
+-- | /O(n)/ Convert a 'ByteString' into a 'Stream Char', using
 -- UTF-8 encoding.
 decodeUtf8 :: B.ByteString -> DecodeResult
 decodeUtf8 = decodeChunk B.empty 0 0
@@ -159,7 +159,7 @@ decodeUtf8 = decodeChunk B.empty 0 0
                          $! decodeChunkCheck unused codepoint state
         in loop (ptr `plusPtr` off)
 
--- | /O(n)/ Convert a lazy 'ByteString' into a 'Stream Char', using
+-- | /O(n)/ Convert a 'ByteString' into a 'Stream Char', using
 -- UTF-8 encoding.
 decodeUtf8Pure :: B.ByteString -> DecodeResult
 decodeUtf8Pure =
