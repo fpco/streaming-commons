@@ -102,7 +102,7 @@ import Data.Functor.Identity (Identity (Identity), runIdentity)
 import Control.Concurrent (forkIO)
 import Control.Monad (forever)
 import Data.IORef (IORef, newIORef, atomicModifyIORef)
-import Data.Array.Unboxed ((!), UArray, bounds, listArray)
+import Data.Array.Unboxed ((!), UArray, listArray)
 import System.IO.Unsafe (unsafePerformIO)
 import System.Random (randomRIO)
 #if WINDOWS
