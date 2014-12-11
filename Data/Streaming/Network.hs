@@ -71,7 +71,7 @@ module Data.Streaming.Network
     , safeRecv
     , runTCPServer
     , runTCPClient
-    , ConnectionHandle (..)
+    , ConnectionHandle()
     , runTCPServerWithHandle
       -- ** UDP
     , bindPortUDP
@@ -102,7 +102,7 @@ import Data.Functor.Identity (Identity (Identity), runIdentity)
 import Control.Concurrent (forkIO)
 import Control.Monad (forever)
 import Data.IORef (IORef, newIORef, atomicModifyIORef)
-import Data.Array.Unboxed ((!), UArray, bounds, listArray)
+import Data.Array.Unboxed ((!), UArray, listArray)
 import System.IO.Unsafe (unsafePerformIO)
 import System.Random (randomRIO)
 #if WINDOWS
@@ -188,7 +188,7 @@ bindPortGen sockettype p s = do
 -- Since 0.1.1
 bindRandomPortGen :: SocketType -> HostPreference -> IO (Int, Socket)
 bindRandomPortGen sockettype s =
-    loop 30
+    loop (30 :: Int)
   where
     loop cnt = do
         port <- getUnassignedPort
@@ -465,12 +465,6 @@ getPort = getConstant . portLens Constant
 
 setPort :: HasPort a => Int -> a -> a
 setPort p = runIdentity . portLens (const (Identity p))
-
-setHostPref :: HostPreference -> ServerSettings -> ServerSettings
-setHostPref hp ss = ss { serverHost = hp }
-
-getHostPref :: ServerSettings -> HostPreference
-getHostPref = serverHost
 
 setHost :: ByteString -> ClientSettings -> ClientSettings
 setHost hp ss = ss { clientHost = hp }

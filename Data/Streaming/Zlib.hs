@@ -49,7 +49,6 @@ import Data.ByteString.Unsafe
 import Codec.Compression.Zlib (WindowBits(WindowBits), defaultWindowBits)
 import qualified Data.ByteString as S
 import Data.ByteString.Lazy.Internal (defaultChunkSize)
-import Control.Monad (when)
 import Data.Typeable (Typeable)
 import Control.Exception (Exception)
 

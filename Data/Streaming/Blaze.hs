@@ -38,8 +38,6 @@ module Data.Streaming.Blaze
     ) where
 
 import Data.IORef
-import Control.Monad (unless, liftM)
-import Control.Monad.Trans.Class (lift, MonadTrans)
 
 import qualified Data.ByteString                   as S
 
