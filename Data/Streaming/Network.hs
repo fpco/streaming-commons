@@ -71,7 +71,7 @@ module Data.Streaming.Network
     , safeRecv
     , runTCPServer
     , runTCPClient
-    , ConnectionHandle (..)
+    , ConnectionHandle()
     , runTCPServerWithHandle
       -- ** UDP
     , bindPortUDP
