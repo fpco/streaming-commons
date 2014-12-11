@@ -188,7 +188,7 @@ bindPortGen sockettype p s = do
 -- Since 0.1.1
 bindRandomPortGen :: SocketType -> HostPreference -> IO (Int, Socket)
 bindRandomPortGen sockettype s =
-    loop 30
+    loop (30 :: Int)
   where
     loop cnt = do
         port <- getUnassignedPort
