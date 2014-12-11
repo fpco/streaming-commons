@@ -528,7 +528,7 @@ setAfterBind p = runIdentity . afterBindLens (const (Identity p))
 
 type ConnectionHandle = Socket -> NS.SockAddr -> Maybe NS.SockAddr -> IO ()
 
-runTCPServerWithHandle :: ServerSettings -> ConnectionHandle -> IO ()
+runTCPServerWithHandle :: ServerSettings -> ConnectionHandle -> IO a
 runTCPServerWithHandle (ServerSettings port host msocket afterBind needLocalAddr) handle =
     case msocket of
         Nothing -> E.bracket (bindPortTCP port host) NS.sClose inner
@@ -552,7 +552,7 @@ runTCPServerWithHandle (ServerSettings port host msocket afterBind needLocalAddr
 -- | Run an @Application@ with the given settings. This function will create a
 -- new listening socket, accept connections on it, and spawn a new thread for
 -- each connection.
-runTCPServer :: ServerSettings -> (AppData -> IO ()) -> IO ()
+runTCPServer :: ServerSettings -> (AppData -> IO ()) -> IO a
 runTCPServer settings app = runTCPServerWithHandle settings app'
   where app' socket addr mlocal =
           let ad = AppData
@@ -613,7 +613,7 @@ appWrite = getConstant . writeLens Constant
 -- | Run an @Application@ with the given settings. This function will create a
 -- new listening socket, accept connections on it, and spawn a new thread for
 -- each connection.
-runUnixServer :: ServerSettingsUnix -> (AppDataUnix -> IO ()) -> IO ()
+runUnixServer :: ServerSettingsUnix -> (AppDataUnix -> IO ()) -> IO a
 runUnixServer (ServerSettingsUnix path afterBind) app = E.bracket
     (bindPath path)
     NS.sClose
