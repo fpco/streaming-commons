@@ -20,6 +20,9 @@ extra-source-files:
     ChangeLog.md
     README.md
 
+flag use-bytestring-builder
+  description: Use bytestring-builder package
+
 library
   exposed-modules:     Data.Streaming.Blaze
                        Data.Streaming.ByteString.Builder
@@ -66,8 +69,11 @@ library
   else
     build-depends:     unix
 
-  if impl(ghc < 7.7.0)
-    build-depends:     bytestring-builder
+  if flag(use-bytestring-builder)
+    build-depends:     bytestring < 0.10.2.0
+                     , bytestring-builder
+  else
+    build-depends:     bytestring >= 0.10.2.0
 
 test-suite test
     hs-source-dirs: test
@@ -93,6 +99,12 @@ test-suite test
                   , network
                   , text
                   , zlib
+
+  if flag(use-bytestring-builder)
+    build-depends:     bytestring < 0.10.2.0
+                     , bytestring-builder
+  else
+    build-depends:     bytestring >= 0.10.2.0
 
   if os(windows)
     cpp-options:       -DWINDOWS
@@ -121,14 +133,20 @@ benchmark decode-memory-usage
 benchmark builder-to-bytestring-io
     type: exitcode-stdio-1.0
     hs-source-dirs: bench
+    main-is:        builder-to-bytestring-io.hs
+    ghc-options:    -Wall -O2
     build-depends:  base
                   , blaze-builder
                   , bytestring
                   , criterion
                   , deepseq
                   , streaming-commons
-    main-is:        builder-to-bytestring-io.hs
-    ghc-options:    -Wall -O2
+
+  if flag(use-bytestring-builder)
+    build-depends:     bytestring < 0.10.2.0
+                     , bytestring-builder
+  else
+    build-depends:     bytestring >= 0.10.2.0
 
 source-repository head
   type:     git
