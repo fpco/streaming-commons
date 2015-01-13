@@ -1,4 +1,6 @@
 -- | Provides @toByteStringIO*@ like "Blaze.ByteString.Builder"s, for "Data.ByteString.Builder".
+--
+-- Since 0.1.9
 module Data.Streaming.ByteString.Builder
     ( toByteStringIO
     , toByteStringIOWith
@@ -14,6 +16,8 @@ import Data.Word (Word8)
 import Foreign.ForeignPtr (ForeignPtr, withForeignPtr)
 
 -- | Use a pre-existing buffer to 'toByteStringIOWith'.
+--
+-- Since 0.1.9
 toByteStringIOWithBuffer :: Int
                          -> (ByteString -> IO ())
                          -> Builder
@@ -50,6 +54,8 @@ toByteStringIOWithBuffer initBufSize io b initBuf = do
 -- default buffer size of 32kb. Hence, the pressure on the garbage collector is
 -- reduced, which can be an advantage when building long sequences of bytes.
 --
+-- Since 0.1.9
+--
 toByteStringIOWith :: Int                    -- ^ Buffer size (upper bounds
                                              -- the number of bytes forced
                                              -- per call to the 'IO' action).
@@ -66,6 +72,8 @@ toByteStringIOWith bufSize io b =
 -- 'IO' action whenever the buffer is full or gets flushed.
 --
 -- @ 'toByteStringIO' = 'toByteStringIOWith' 'defaultChunkSize'@
+--
+-- Since 0.1.9
 --
 toByteStringIO :: (ByteString -> IO ())
                -> Builder

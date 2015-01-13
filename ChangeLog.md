@@ -1,3 +1,7 @@
+## 0.1.9
+
+Add Data.Streaming.ByteString.Builder
+
 ## 0.1.8
 
 Generalise types of run\*Server which never cleanly return [#13](https://github.com/fpco/streaming-commons/pull/13)
