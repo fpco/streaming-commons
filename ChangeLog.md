@@ -1,3 +1,7 @@
+## 0.1.10
+
+Support blaze-builder >= 0.4.  Add `newByteStringBuilderRecv` to Data.Streaming.ByteString.Builder; add modules Data.Streaming.ByteString.Builder.Buffer and  Data.Streaming.ByteString.Builder.Class.
+
 ## 0.1.9
 
 Add Data.Streaming.ByteString.Builder
