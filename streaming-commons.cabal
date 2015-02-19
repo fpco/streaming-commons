@@ -47,7 +47,7 @@ library
 
   build-depends:       base >= 4.4 && < 5
                      , array
-                     , blaze-builder >= 0.3 && < 0.4
+                     , blaze-builder >= 0.3 && < 0.5
                      , bytestring
                      , directory
                      , network
