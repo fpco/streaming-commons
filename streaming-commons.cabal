@@ -5,7 +5,7 @@ description:         Provides low-dependency functionality commonly needed by va
 homepage:            https://github.com/fpco/streaming-commons
 license:             MIT
 license-file:        LICENSE
-author:              Michael Snoyman
+author:              Michael Snoyman, Emanuel Borsboom
 maintainer:          michael@snoyman.com
 -- copyright:           
 category:            Data
