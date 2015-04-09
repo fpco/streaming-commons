@@ -1,3 +1,7 @@
+## 0.1.11
+
+* `getUnusedInflated`: Return uncompressed data following compressed data [#20](https://github.com/fpco/streaming-commons/issues/20)
+
 ## 0.1.10
 
 Support blaze-builder >= 0.4.  Add `newByteStringBuilderRecv` to Data.Streaming.ByteString.Builder; add modules Data.Streaming.ByteString.Builder.Buffer and  Data.Streaming.ByteString.Builder.Class.

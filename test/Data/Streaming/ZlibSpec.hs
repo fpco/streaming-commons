@@ -6,6 +6,7 @@ import Test.Hspec
 import Test.Hspec.QuickCheck (prop)
 import Test.QuickCheck (Arbitrary (..))
 
+import Control.Exception (throwIO)
 import Data.Streaming.Zlib
 import Codec.Compression.Zlib
 import qualified Codec.Compression.GZip as Gzip
@@ -218,6 +219,26 @@ spec = describe "Data.Streaming.Zlib" $ do
             output <- decompressRaw $ Raw.compress input
             L.all (== 10) output `shouldBe` True
             L.length output `shouldBe` L.length input
+
+    it "getUnusedInflate" $ do
+        let c = "This data is stored compressed."
+            u = "This data isn't."
+        def <- initDeflate 5 defaultWindowBits
+        let loop front popper = do
+                res <- popper
+                case res of
+                    PRDone -> return front
+                    PRNext bs -> loop (S.append front bs) popper
+                    PRError e -> throwIO e
+
+        c' <- feedDeflate def c >>= loop S.empty >>= flip loop (finishDeflate def)
+
+        inf <- initInflate defaultWindowBits
+        x <- feedInflate inf (S.append c' u) >>= loop S.empty
+        y <- finishInflate inf
+        S.append x y `shouldBe` c
+        z <- getUnusedInflate inf
+        z `shouldBe` u
 
 rawWindowBits :: WindowBits
 rawWindowBits = WindowBits (-15)
