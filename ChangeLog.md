@@ -1,3 +1,7 @@
+## 0.1.12
+
+* `appRawSocket`
+
 ## 0.1.11
 
 * `getUnusedInflated`: Return uncompressed data following compressed data [#20](https://github.com/fpco/streaming-commons/issues/20)

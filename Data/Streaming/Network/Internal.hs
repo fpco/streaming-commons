@@ -97,4 +97,5 @@ data AppData = AppData
     , appSockAddr' :: !SockAddr
     , appLocalAddr' :: !(Maybe SockAddr)
     , appCloseConnection' :: !(IO ())
+    , appRawSocket' :: Maybe Socket
     }

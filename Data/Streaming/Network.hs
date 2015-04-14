@@ -54,6 +54,7 @@ module Data.Streaming.Network
     , appSockAddr
     , appLocalAddr
     , appCloseConnection
+    , appRawSocket
       -- * Functions
       -- ** General
     , bindPortGen
@@ -555,6 +556,7 @@ runTCPServer settings app = runTCPServerWithHandle settings app'
                 , appSockAddr' = addr
                 , appLocalAddr' = mlocal
                 , appCloseConnection' = NS.sClose socket
+                , appRawSocket' = Just socket
                 }
           in
             app ad
@@ -570,6 +572,7 @@ runTCPClient (ClientSettings port host addrFamily) app = E.bracket
         , appSockAddr' = address
         , appLocalAddr' = Nothing
         , appCloseConnection' = NS.sClose s
+        , appRawSocket' = Just s
         })
 
 appLocalAddr :: AppData -> Maybe NS.SockAddr
@@ -584,6 +587,12 @@ appSockAddr = appSockAddr'
 -- Since 0.1.6
 appCloseConnection :: AppData -> IO ()
 appCloseConnection = appCloseConnection'
+
+-- | Get the raw socket for this @AppData@, if available.
+--
+-- Since 0.1.12
+appRawSocket :: AppData -> Maybe NS.Socket
+appRawSocket = appRawSocket'
 
 class HasReadWrite a where
     readLens :: Functor f => (IO ByteString -> f (IO ByteString)) -> a -> f a
