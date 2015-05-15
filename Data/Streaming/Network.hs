@@ -106,6 +106,7 @@ import Data.IORef (IORef, newIORef, atomicModifyIORef)
 import Data.Array.Unboxed ((!), UArray, listArray)
 import System.IO.Unsafe (unsafePerformIO)
 import System.Random (randomRIO)
+import System.IO.Error (isFullErrorType, ioeGetErrorType)
 #if WINDOWS
 import Control.Concurrent.MVar (putMVar, takeMVar, newEmptyMVar)
 #endif
@@ -447,9 +448,12 @@ acceptSafe socket =
 #endif
   where
     loop =
-        NS.accept socket `E.catch` \(_ :: IOException) -> do
-            threadDelay 1000000
-            loop
+        NS.accept socket `E.catch` \e ->
+            if isFullErrorType (ioeGetErrorType e)
+                then do
+                    threadDelay 1000000
+                    loop
+                else E.throwIO e
 
 message :: ByteString -> NS.SockAddr -> Message
 message = Message
