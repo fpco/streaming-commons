@@ -24,6 +24,7 @@ data ServerSettings = ServerSettings
     , serverSocket :: !(Maybe Socket) -- ^ listening socket
     , serverAfterBind :: !(Socket -> IO ())
     , serverNeedLocalAddr :: !Bool
+    , serverReadBufferSize :: !Int
     }
 
 -- | Settings for a TCP client, specifying how to connect to the server.
@@ -31,6 +32,7 @@ data ClientSettings = ClientSettings
     { clientPort :: !Int
     , clientHost :: !ByteString
     , clientAddrFamily :: !Family
+    , clientReadBufferSize :: !Int
     }
 
 -- | Which host to bind.
@@ -71,11 +73,13 @@ instance IsString HostPreference where
 data ServerSettingsUnix = ServerSettingsUnix
     { serverPath :: !FilePath
     , serverAfterBindUnix :: !(Socket -> IO ())
+    , serverReadBufferSizeUnix :: !Int
     }
 
 -- | Settings for a Unix domain sockets client.
 data ClientSettingsUnix = ClientSettingsUnix
     { clientPath :: !FilePath
+    , clientReadBufferSizeUnix :: !Int
     }
 
 -- | The data passed to a Unix domain sockets @Application@.
