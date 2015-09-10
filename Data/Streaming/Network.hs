@@ -37,6 +37,7 @@ module Data.Streaming.Network
     , setAddrFamily
     , setAfterBind
     , setNeedLocalAddr
+    , setReadBufferSize
 #if !WINDOWS
     , setPath
 #endif
@@ -46,6 +47,7 @@ module Data.Streaming.Network
     , getAddrFamily
     , getAfterBind
     , getNeedLocalAddr
+    , getReadBufferSize
 #if !WINDOWS
     , getPath
 #endif
@@ -272,6 +274,9 @@ bindPortUDP = bindPortGen NS.Datagram
 bindRandomPortUDP :: HostPreference -> IO (Int, Socket)
 bindRandomPortUDP = bindRandomPortGen NS.Datagram
 
+defaultReadBufferSize :: Int
+defaultReadBufferSize = 32768
+
 #if !WINDOWS
 -- | Attempt to connect to the given Unix domain socket path.
 getSocketUnix :: FilePath -> IO Socket
@@ -313,6 +318,7 @@ serverSettingsUnix
 serverSettingsUnix path = ServerSettingsUnix
     { serverPath = path
     , serverAfterBindUnix = const $ return ()
+    , serverReadBufferSizeUnix = defaultReadBufferSize
     }
 
 -- | Smart constructor.
@@ -321,6 +327,7 @@ clientSettingsUnix
     -> ClientSettingsUnix
 clientSettingsUnix path = ClientSettingsUnix
     { clientPath = path
+    , clientReadBufferSizeUnix = defaultReadBufferSize
     }
 #endif
 
@@ -359,6 +366,7 @@ serverSettingsTCP port host = ServerSettings
     , serverSocket = Nothing
     , serverAfterBind = const $ return ()
     , serverNeedLocalAddr = False
+    , serverReadBufferSize = defaultReadBufferSize
     }
 
 -- | Create a server settings that uses an already available listening socket.
@@ -372,6 +380,7 @@ serverSettingsTCPSocket lsocket = ServerSettings
     , serverSocket = Just lsocket
     , serverAfterBind = const $ return ()
     , serverNeedLocalAddr = False
+    , serverReadBufferSize = defaultReadBufferSize
     }
 
 -- | Smart constructor.
@@ -390,6 +399,7 @@ clientSettingsTCP port host = ClientSettings
     { clientPort = port
     , clientHost = host
     , clientAddrFamily = NS.AF_UNSPEC
+    , clientReadBufferSize = defaultReadBufferSize
     }
 
 -- | Attempt to connect to the given host/port/address family.
@@ -525,10 +535,27 @@ getAfterBind = getConstant . afterBindLens Constant
 setAfterBind :: HasAfterBind a => (Socket -> IO ()) -> a -> a
 setAfterBind p = runIdentity . afterBindLens (const (Identity p))
 
+class HasReadBufferSize a where
+    readBufferSizeLens :: Functor f => (Int -> f Int) -> a -> f a
+instance HasReadBufferSize ServerSettings where
+    readBufferSizeLens f ss = fmap (\p -> ss { serverReadBufferSize = p }) (f (serverReadBufferSize ss))
+instance HasReadBufferSize ClientSettings where
+    readBufferSizeLens f cs = fmap (\p -> cs { clientReadBufferSize = p }) (f (clientReadBufferSize cs))
+#if !WINDOWS
+instance HasReadBufferSize ServerSettingsUnix where
+    readBufferSizeLens f ss = fmap (\p -> ss { serverReadBufferSizeUnix = p }) (f (serverReadBufferSizeUnix ss))
+#endif
+
+getReadBufferSize :: HasReadBufferSize a => a -> Int
+getReadBufferSize = getConstant . readBufferSizeLens Constant
+
+setReadBufferSize :: HasReadBufferSize a => Int -> a -> a
+setReadBufferSize p = runIdentity . readBufferSizeLens (const (Identity p))
+
 type ConnectionHandle = Socket -> NS.SockAddr -> Maybe NS.SockAddr -> IO ()
 
 runTCPServerWithHandle :: ServerSettings -> ConnectionHandle -> IO a
-runTCPServerWithHandle (ServerSettings port host msocket afterBind needLocalAddr) handle =
+runTCPServerWithHandle (ServerSettings port host msocket afterBind needLocalAddr _) handle =
     case msocket of
         Nothing -> E.bracket (bindPortTCP port host) NS.sClose inner
         Just lsocket -> inner lsocket
@@ -555,7 +582,7 @@ runTCPServer :: ServerSettings -> (AppData -> IO ()) -> IO a
 runTCPServer settings app = runTCPServerWithHandle settings app'
   where app' socket addr mlocal =
           let ad = AppData
-                { appRead' = safeRecv socket 4096
+                { appRead' = safeRecv socket $ getReadBufferSize settings
                 , appWrite' = sendAll socket
                 , appSockAddr' = addr
                 , appLocalAddr' = mlocal
@@ -567,11 +594,11 @@ runTCPServer settings app = runTCPServerWithHandle settings app'
 
 -- | Run an @Application@ by connecting to the specified server.
 runTCPClient :: ClientSettings -> (AppData -> IO a) -> IO a
-runTCPClient (ClientSettings port host addrFamily) app = E.bracket
+runTCPClient (ClientSettings port host addrFamily readBufferSize) app = E.bracket
     (getSocketFamilyTCP host port addrFamily)
     (NS.sClose . fst)
     (\(s, address) -> app AppData
-        { appRead' = safeRecv s 4096
+        { appRead' = safeRecv s readBufferSize
         , appWrite' = sendAll s
         , appSockAddr' = address
         , appLocalAddr' = Nothing
@@ -621,7 +648,7 @@ appWrite = getConstant . writeLens Constant
 -- new listening socket, accept connections on it, and spawn a new thread for
 -- each connection.
 runUnixServer :: ServerSettingsUnix -> (AppDataUnix -> IO ()) -> IO a
-runUnixServer (ServerSettingsUnix path afterBind) app = E.bracket
+runUnixServer (ServerSettingsUnix path afterBind readBufferSize) app = E.bracket
     (bindPath path)
     NS.sClose
     (\socket -> do
@@ -633,7 +660,7 @@ runUnixServer (ServerSettingsUnix path afterBind) app = E.bracket
         (\(socket, _) -> NS.sClose socket)
         $ \(socket, _) -> do
             let ad = AppDataUnix
-                    { appReadUnix = safeRecv socket 4096
+                    { appReadUnix = safeRecv socket readBufferSize
                     , appWriteUnix = sendAll socket
                     }
             _ <- E.mask $ \restore -> forkIO
@@ -643,11 +670,11 @@ runUnixServer (ServerSettingsUnix path afterBind) app = E.bracket
 
 -- | Run an @Application@ by connecting to the specified server.
 runUnixClient :: ClientSettingsUnix -> (AppDataUnix -> IO a) -> IO a
-runUnixClient (ClientSettingsUnix path) app = E.bracket
+runUnixClient (ClientSettingsUnix path readBufferSize) app = E.bracket
     (getSocketUnix path)
     NS.sClose
     (\sock -> app AppDataUnix
-        { appReadUnix = safeRecv sock 4096
+        { appReadUnix = safeRecv sock readBufferSize
         , appWriteUnix = sendAll sock
         })
 #endif
