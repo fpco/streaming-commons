@@ -1,3 +1,7 @@
+## 0.1.13
+
+* Make size of read buffer configurable, change default size to 32 kiB [#23](https://github.com/fpco/streaming-commons/pull/23)
+
 ## 0.1.12.1
 
 * Fix up `acceptSafe` as [mentioned by Kazu](https://github.com/yesodweb/wai/issues/361#issuecomment-102204803)
