@@ -28,6 +28,7 @@ module Data.Streaming.Network
     , HasPort (..)
     , HasAfterBind (..)
     , HasReadWrite (..)
+    , HasReadBufferSize (..)
 #if !WINDOWS
     , HasPath (..)
 #endif
@@ -535,20 +536,33 @@ getAfterBind = getConstant . afterBindLens Constant
 setAfterBind :: HasAfterBind a => (Socket -> IO ()) -> a -> a
 setAfterBind p = runIdentity . afterBindLens (const (Identity p))
 
+-- | Since 0.1.13
 class HasReadBufferSize a where
     readBufferSizeLens :: Functor f => (Int -> f Int) -> a -> f a
+-- | Since 0.1.13
 instance HasReadBufferSize ServerSettings where
     readBufferSizeLens f ss = fmap (\p -> ss { serverReadBufferSize = p }) (f (serverReadBufferSize ss))
+-- | Since 0.1.13
 instance HasReadBufferSize ClientSettings where
     readBufferSizeLens f cs = fmap (\p -> cs { clientReadBufferSize = p }) (f (clientReadBufferSize cs))
 #if !WINDOWS
+-- | Since 0.1.13
 instance HasReadBufferSize ServerSettingsUnix where
     readBufferSizeLens f ss = fmap (\p -> ss { serverReadBufferSizeUnix = p }) (f (serverReadBufferSizeUnix ss))
+-- | Since 0.1.14
+instance HasReadBufferSize ClientSettingsUnix where
+    readBufferSizeLens f ss = fmap (\p -> ss { clientReadBufferSizeUnix = p }) (f (clientReadBufferSizeUnix ss))
 #endif
 
+-- | Get buffer size used when reading from socket.
+--
+-- Since 0.1.13
 getReadBufferSize :: HasReadBufferSize a => a -> Int
 getReadBufferSize = getConstant . readBufferSizeLens Constant
 
+-- | Set buffer size used when reading from socket.
+--
+-- Since 0.1.13
 setReadBufferSize :: HasReadBufferSize a => Int -> a -> a
 setReadBufferSize p = runIdentity . readBufferSizeLens (const (Identity p))
 
