@@ -1,3 +1,7 @@
+## 0.1.14
+
+* Exporting HasReadBufferSize; instance for ClientSettingsUnix [#24](https://github.com/fpco/streaming-commons/pull/24)
+
 ## 0.1.13
 
 * Make size of read buffer configurable, change default size to 32 kiB [#23](https://github.com/fpco/streaming-commons/pull/23)
