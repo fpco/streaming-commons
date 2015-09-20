@@ -88,6 +88,7 @@ test-suite test
                     Data.Streaming.FileReadSpec
                     Data.Streaming.FilesystemSpec
                     Data.Streaming.NetworkSpec
+                    Data.Streaming.ProcessSpec
                     Data.Streaming.TextSpec
                     Data.Streaming.ZlibSpec
     build-depends:  base
