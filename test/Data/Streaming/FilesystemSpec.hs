@@ -39,10 +39,14 @@ spec = describe "Data.Streaming.Filesystem" $ do
             ft `shouldBe` FTDirectorySym
         it "other" $ do
             _ <- tryIO $ removeLink "tmp"
-            createNamedPipe "tmp" 0
-            ft <- getFileType "tmp"
-            _ <- tryIO $ removeLink "tmp"
-            ft `shouldBe` FTOther
+            e <- tryIO $ createNamedPipe "tmp" 0
+            case e of
+                -- Creating named pipe might fail on some filesystems
+                Left _ -> return ()
+                Right _ -> do
+                    ft <- getFileType "tmp"
+                    _ <- tryIO $ removeLink "tmp"
+                    ft `shouldBe` FTOther
         it "recursive symlink is other" $ do
             _ <- tryIO $ removeLink "tmp"
             createSymbolicLink "tmp" "tmp"
