@@ -1,3 +1,7 @@
+## 0.1.14.2
+
+* Fix bug in process exception display of args with spaces/quotes
+
 ## 0.1.14
 
 * Exporting HasReadBufferSize; instance for ClientSettingsUnix [#24](https://github.com/fpco/streaming-commons/pull/24)

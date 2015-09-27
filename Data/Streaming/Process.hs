@@ -179,7 +179,12 @@ instance Show ProcessExitedUnsuccessfully where
         ]
       where
         showCmdSpec (ShellCommand str) = str
-        showCmdSpec (RawCommand x xs) = unwords (x:xs)
+        showCmdSpec (RawCommand x xs) = unwords (x:map showArg xs)
+
+        -- Ensure that strings that need to be escaped are
+        showArg x
+            | any (\c -> c == '"' || c == ' ') x = show x
+            | otherwise = x
 instance Exception ProcessExitedUnsuccessfully
 
 -- | Run a process and supply its streams to the given callback function. After
