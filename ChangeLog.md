@@ -1,3 +1,7 @@
+## 0.1.15
+
+* Use `NO_DELAY1 for TCP client connections [#27](https://github.com/fpco/streaming-commons/issues/27)
+
 ## 0.1.14.2
 
 * Fix bug in process exception display of args with spaces/quotes

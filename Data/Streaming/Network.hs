@@ -409,6 +409,7 @@ clientSettingsTCP port host = ClientSettings
 getSocketFamilyTCP :: ByteString -> Int -> NS.Family -> IO (NS.Socket, NS.SockAddr)
 getSocketFamilyTCP host' port' addrFamily = do
     (sock, addr) <- getSocketFamilyGen NS.Stream (S8.unpack host') port' addrFamily
+    NS.setSocketOption sock NS.NoDelay 1
     ee <- try' $ NS.connect sock (NS.addrAddress addr)
     case ee of
         Left e -> NS.sClose sock >> throwIO e
