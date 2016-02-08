@@ -1,3 +1,7 @@
+## 0.1.15.1
+
+* Catch exceptions thrown by `waitForProcess`
+
 ## 0.1.15
 
 * Use `NO_DELAY1 for TCP client connections [#27](https://github.com/fpco/streaming-commons/issues/27)

@@ -31,11 +31,12 @@ module Data.Streaming.Process
     ) where
 
 import           Control.Applicative             ((<$>), (<*>))
-import           Control.Concurrent              (forkIO)
+import           Control.Concurrent              (forkIOWithUnmask)
 import           Control.Concurrent.STM          (STM, TMVar, atomically,
                                                   newEmptyTMVar, putTMVar,
                                                   readTMVar)
-import           Control.Exception               (Exception, throwIO)
+import           Control.Exception               (Exception, throwIO, try, throw,
+                                                  SomeException)
 import           Control.Monad.IO.Class          (MonadIO, liftIO)
 import           Data.Maybe                      (fromMaybe)
 import           Data.Streaming.Process.Internal
@@ -157,7 +158,16 @@ streamingProcess cp = liftIO $ do
         }
 
     ec <- atomically newEmptyTMVar
-    _ <- forkIO $ waitForProcess ph >>= atomically . putTMVar ec
+    -- Apparently waitForProcess can throw an exception itself when
+    -- delegate_ctlc is True, so to avoid this TMVar from being left empty, we
+    -- capture any exceptions and store them as an impure exception in the
+    -- TMVar
+    _ <- forkIOWithUnmask $ \_unmask -> try (waitForProcess ph)
+        >>= atomically
+          . putTMVar ec
+          . either
+              (throw :: SomeException -> a)
+              id
 
     (,,,)
         <$> getStdin stdinH

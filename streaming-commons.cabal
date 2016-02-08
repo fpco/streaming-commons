@@ -1,5 +1,5 @@
 name:                streaming-commons
-version:             0.1.15
+version:             0.1.15.1
 synopsis:            Common lower-level functions needed by various streaming data libraries
 description:         Provides low-dependency functionality commonly needed by various streaming data libraries, such as conduit and pipes.
 homepage:            https://github.com/fpco/streaming-commons
@@ -49,6 +49,7 @@ library
 
   build-depends:       base >= 4.4 && < 5
                      , array
+                     , async
                      , blaze-builder >= 0.3 && < 0.5
                      , bytestring
                      , directory
