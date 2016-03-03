@@ -202,6 +202,10 @@ instance Exception ProcessExitedUnsuccessfully
 -- code. If the exit code is not a success, throw a
 -- 'ProcessExitedUnsuccessfully'.
 --
+-- NOTE: This function does not kill the child process in the event of an
+-- exception from the provided function. For that, please use
+-- @withCheckedProcessCleanup@ from the @conduit-extra@ package.
+--
 -- Since 0.1.7
 withCheckedProcess :: ( InputSource stdin
                       , OutputSink stderr

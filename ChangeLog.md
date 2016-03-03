@@ -1,3 +1,7 @@
+## 0.1.15.2
+
+* Document child process behavior in `waitForProcess`
+
 ## 0.1.15.1
 
 * Catch exceptions thrown by `waitForProcess`
