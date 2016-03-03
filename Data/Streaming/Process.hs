@@ -213,8 +213,7 @@ withCheckedProcess :: ( InputSource stdin
                    -> m b
 withCheckedProcess cp f = do
     (x, y, z, sph) <- streamingProcess cp
-    res <- f x y z `onException`
-            terminateProcess (streamingProcessHandleRaw sph)
+    res <- f x y z
     ec <- waitForStreamingProcess sph
     if ec == ExitSuccess
         then return res

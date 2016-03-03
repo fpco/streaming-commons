@@ -1,8 +1,3 @@
-## 0.1.16
-
-* `withCheckedProcess` will kill the child process when the inner function
-throws an exception
-
 ## 0.1.15.1
 
 * Catch exceptions thrown by `waitForProcess`
