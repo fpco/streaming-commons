@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 import Data.ByteString (ByteString)
-import Data.Text.StreamDecoding
+import Data.Streaming.Text
 import System.Environment (getArgs)
 
 input :: [ByteString]
@@ -11,12 +11,12 @@ main = do
     args <- getArgs
     let dec =
             case args of
-                ["16le"] -> streamUtf16LE
-                ["16be"] -> streamUtf16BE
-                ["32le"] -> streamUtf32LE
-                ["32be"] -> streamUtf32BE
-                ["8pure"] -> streamUtf8Pure
-                _ -> streamUtf8
+                ["16le"] -> decodeUtf16LE
+                ["16be"] -> decodeUtf16BE
+                ["32le"] -> decodeUtf32LE
+                ["32be"] -> decodeUtf32BE
+                ["8pure"] -> decodeUtf8Pure
+                _ -> decodeUtf8
 
     loop dec input
 

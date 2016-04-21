@@ -1,5 +1,5 @@
 name:                streaming-commons
-version:             0.1.15.2
+version:             0.1.15.3
 synopsis:            Common lower-level functions needed by various streaming data libraries
 description:         Provides low-dependency functionality commonly needed by various streaming data libraries, such as conduit and pipes.
 homepage:            https://github.com/fpco/streaming-commons
@@ -124,6 +124,7 @@ benchmark count-chars
                   , criterion
                   , bytestring
                   , text
+                  , streaming-commons
     main-is:        count-chars.hs
     ghc-options:    -Wall -O2
 
@@ -133,6 +134,7 @@ benchmark decode-memory-usage
     build-depends:  base
                   , bytestring
                   , text
+                  , streaming-commons
     main-is:        decode-memory-usage.hs
     ghc-options:    -Wall -O2 -with-rtsopts=-s
 

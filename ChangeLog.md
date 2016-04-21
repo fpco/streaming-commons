@@ -1,3 +1,7 @@
+## 0.1.15.3
+
+* Fix benchmarks
+
 ## 0.1.15.2
 
 * Document child process behavior in `waitForProcess`
