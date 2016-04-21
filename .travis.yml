@@ -97,7 +97,7 @@ install:
  - |
    case "$BUILD" in
      stack)
-       stack --no-terminal --install-ghc $ARGS test --only-dependencies;;
+       stack --no-terminal --install-ghc $ARGS test --bench --only-dependencies;;
      cabal)
        cabal --version;
        travis_retry cabal update;
