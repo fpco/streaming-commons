@@ -31,4 +31,4 @@ spec = do
                         | null content = "hello"
                         | otherwise = S8.pack $ take 1000 content
                 withAsync (runTCPServer (serverSettingsTCPSocket socket) server) $ \_ -> do
-                    runTCPClient (clientSettingsTCP port "127.0.0.1") client
+                    runTCPClient (clientSettingsTCP port "localhost") client
