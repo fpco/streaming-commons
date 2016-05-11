@@ -114,17 +114,22 @@ import System.IO.Error (isFullErrorType, ioeGetErrorType)
 import Control.Concurrent.MVar (putMVar, takeMVar, newEmptyMVar)
 #endif
 
+getPossibleAddrs :: SocketType -> String -> Int -> NS.Family -> IO [AddrInfo]
+getPossibleAddrs sockettype host' port' af =
+    NS.getAddrInfo (Just hints) (Just host') (Just $ show port')
+  where
+    hints = NS.defaultHints {
+                NS.addrFlags = [NS.AI_ADDRCONFIG]
+              , NS.addrSocketType = sockettype
+              , NS.addrFamily = af
+              }
+
 -- | Attempt to connect to the given host/port/address family using given @SocketType@.
 --
 -- Since 0.1.3
 getSocketFamilyGen :: SocketType -> String -> Int -> NS.Family -> IO (Socket, AddrInfo)
 getSocketFamilyGen sockettype host' port' af = do
-    let hints = NS.defaultHints {
-                          NS.addrFlags = [NS.AI_ADDRCONFIG]
-                        , NS.addrSocketType = sockettype
-                        , NS.addrFamily = af
-                        }
-    (addr:_) <- NS.getAddrInfo (Just hints) (Just host') (Just $ show port')
+    (addr:_) <- getPossibleAddrs sockettype host' port' af
     sock <- NS.socket (NS.addrFamily addr) (NS.addrSocketType addr)
                       (NS.addrProtocol addr)
     return (sock, addr)
@@ -408,15 +413,22 @@ clientSettingsTCP port host = ClientSettings
 -- Since 0.1.3
 getSocketFamilyTCP :: ByteString -> Int -> NS.Family -> IO (NS.Socket, NS.SockAddr)
 getSocketFamilyTCP host' port' addrFamily = do
-    (sock, addr) <- getSocketFamilyGen NS.Stream (S8.unpack host') port' addrFamily
-    NS.setSocketOption sock NS.NoDelay 1
-    ee <- try' $ NS.connect sock (NS.addrAddress addr)
-    case ee of
-        Left e -> NS.sClose sock >> throwIO e
-        Right () -> return (sock, NS.addrAddress addr)
+    addrsInfo <- getPossibleAddrs NS.Stream (S8.unpack host') port' addrFamily
+    firstSuccess addrsInfo
   where
-    try' :: IO a -> IO (Either SomeException a)
-    try' = try
+    firstSuccess [ai]     = connect ai
+    firstSuccess (ai:ais) = connect ai `E.catch` \(_ :: IOException) -> firstSuccess ais
+    firstSuccess _        = error "getSocketFamilyTCP: can't happen"
+
+    createSocket addrInfo = do
+        sock <- NS.socket (NS.addrFamily addrInfo) (NS.addrSocketType addrInfo)
+                          (NS.addrProtocol addrInfo)
+        NS.setSocketOption sock NS.NoDelay 1
+        return sock
+
+    connect addrInfo = E.bracketOnError (createSocket addrInfo) NS.sClose $ \sock -> do
+        NS.connect sock (NS.addrAddress addrInfo)
+        return (sock, NS.addrAddress addrInfo)
 
 -- | Attempt to connect to the given host/port.
 getSocketTCP :: ByteString -> Int -> IO (NS.Socket, NS.SockAddr)
