@@ -8,7 +8,7 @@ import           Data.Array.Unboxed       (elems)
 import qualified Data.ByteString.Char8    as S8
 import           Data.Char                (toUpper)
 import           Data.Streaming.Network
-import           Network.Socket           (sClose)
+import           Network.Socket           (close)
 import           Test.Hspec
 import           Test.Hspec.QuickCheck
 
@@ -21,7 +21,7 @@ spec = do
     describe "bindRandomPortTCP" $ do
         modifyMaxSuccess (const 5) $ prop "sanity" $ \content -> bracket
             (bindRandomPortTCP "*4")
-            (sClose . snd)
+            (close . snd)
             $ \(port, socket) -> do
                 let server ad = forever $ appRead ad >>= appWrite ad . S8.map toUpper
                     client ad = do

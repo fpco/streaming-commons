@@ -182,10 +182,10 @@ bindPortGen sockettype p s = do
         theBody addr =
           bracketOnError
           (NS.socket (NS.addrFamily addr) (NS.addrSocketType addr) (NS.addrProtocol addr))
-          NS.sClose
+          NS.close
           (\sock -> do
               mapM_ (\(opt,v) -> NS.setSocketOption sock opt v) sockOpts
-              NS.bindSocket sock (NS.addrAddress addr)
+              NS.bind sock (NS.addrAddress addr)
               return sock
           )
     tryAddrs addrs'
@@ -290,7 +290,7 @@ getSocketUnix path = do
     sock <- NS.socket NS.AF_UNIX NS.Stream 0
     ee <- try' $ NS.connect sock (NS.SockAddrUnix path)
     case ee of
-        Left e -> NS.sClose sock >> throwIO e
+        Left e -> NS.close sock >> throwIO e
         Right () -> return sock
   where
     try' :: IO a -> IO (Either SomeException a)
@@ -301,10 +301,10 @@ bindPath :: FilePath -> IO Socket
 bindPath path = do
   sock <- bracketOnError
             (NS.socket NS.AF_UNIX NS.Stream 0)
-            NS.sClose
+            NS.close
             (\sock -> do
                 removeFileSafe path  -- Cannot bind if the socket file exists.
-                NS.bindSocket sock (NS.SockAddrUnix path)
+                NS.bind sock (NS.SockAddrUnix path)
                 return sock)
   NS.listen sock (max 2048 NS.maxListenQueue)
   return sock
@@ -426,7 +426,7 @@ getSocketFamilyTCP host' port' addrFamily = do
         NS.setSocketOption sock NS.NoDelay 1
         return sock
 
-    connect addrInfo = E.bracketOnError (createSocket addrInfo) NS.sClose $ \sock -> do
+    connect addrInfo = E.bracketOnError (createSocket addrInfo) NS.close $ \sock -> do
         NS.connect sock (NS.addrAddress addrInfo)
         return (sock, NS.addrAddress addrInfo)
 
@@ -584,20 +584,20 @@ type ConnectionHandle = Socket -> NS.SockAddr -> Maybe NS.SockAddr -> IO ()
 runTCPServerWithHandle :: ServerSettings -> ConnectionHandle -> IO a
 runTCPServerWithHandle (ServerSettings port host msocket afterBind needLocalAddr _) handle =
     case msocket of
-        Nothing -> E.bracket (bindPortTCP port host) NS.sClose inner
+        Nothing -> E.bracket (bindPortTCP port host) NS.close inner
         Just lsocket -> inner lsocket
   where
     inner lsocket = afterBind lsocket >> forever (serve lsocket)
     serve lsocket = E.bracketOnError
         (acceptSafe lsocket)
-        (\(socket, _) -> NS.sClose socket)
+        (\(socket, _) -> NS.close socket)
         $ \(socket, addr) -> do
             mlocal <- if needLocalAddr
                         then fmap Just $ NS.getSocketName socket
                         else return Nothing
             _ <- E.mask $ \restore -> forkIO
                $ restore (handle socket addr mlocal)
-                    `E.finally` NS.sClose socket
+                    `E.finally` NS.close socket
             return ()
 
 
@@ -613,7 +613,7 @@ runTCPServer settings app = runTCPServerWithHandle settings app'
                 , appWrite' = sendAll socket
                 , appSockAddr' = addr
                 , appLocalAddr' = mlocal
-                , appCloseConnection' = NS.sClose socket
+                , appCloseConnection' = NS.close socket
                 , appRawSocket' = Just socket
                 }
           in
@@ -623,13 +623,13 @@ runTCPServer settings app = runTCPServerWithHandle settings app'
 runTCPClient :: ClientSettings -> (AppData -> IO a) -> IO a
 runTCPClient (ClientSettings port host addrFamily readBufferSize) app = E.bracket
     (getSocketFamilyTCP host port addrFamily)
-    (NS.sClose . fst)
+    (NS.close . fst)
     (\(s, address) -> app AppData
         { appRead' = safeRecv s readBufferSize
         , appWrite' = sendAll s
         , appSockAddr' = address
         , appLocalAddr' = Nothing
-        , appCloseConnection' = NS.sClose s
+        , appCloseConnection' = NS.close s
         , appRawSocket' = Just s
         })
 
@@ -677,14 +677,14 @@ appWrite = getConstant . writeLens Constant
 runUnixServer :: ServerSettingsUnix -> (AppDataUnix -> IO ()) -> IO a
 runUnixServer (ServerSettingsUnix path afterBind readBufferSize) app = E.bracket
     (bindPath path)
-    NS.sClose
+    NS.close
     (\socket -> do
         afterBind socket
         forever $ serve socket)
   where
     serve lsocket = E.bracketOnError
         (acceptSafe lsocket)
-        (\(socket, _) -> NS.sClose socket)
+        (\(socket, _) -> NS.close socket)
         $ \(socket, _) -> do
             let ad = AppDataUnix
                     { appReadUnix = safeRecv socket readBufferSize
@@ -692,14 +692,14 @@ runUnixServer (ServerSettingsUnix path afterBind readBufferSize) app = E.bracket
                     }
             _ <- E.mask $ \restore -> forkIO
                 $ restore (app ad)
-                    `E.finally` NS.sClose socket
+                    `E.finally` NS.close socket
             return ()
 
 -- | Run an @Application@ by connecting to the specified server.
 runUnixClient :: ClientSettingsUnix -> (AppDataUnix -> IO a) -> IO a
 runUnixClient (ClientSettingsUnix path readBufferSize) app = E.bracket
     (getSocketUnix path)
-    NS.sClose
+    NS.close
     (\sock -> app AppDataUnix
         { appReadUnix = safeRecv sock readBufferSize
         , appWriteUnix = sendAll sock
