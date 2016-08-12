@@ -100,7 +100,32 @@ before_install:
      echo 'jobs: $ncpus' >> $HOME/.cabal/config
    fi
 
+   echo 'constraint: Cabal installed' >> $HOME/.cabal/config
+   echo 'constraint: array installed' >> $HOME/.cabal/config
+   echo 'constraint: base installed' >> $HOME/.cabal/config
+   echo 'constraint: bin-package-db installed' >> $HOME/.cabal/config
    echo 'constraint: binary installed' >> $HOME/.cabal/config
+   echo 'constraint: bytestring installed' >> $HOME/.cabal/config
+   echo 'constraint: containers installed' >> $HOME/.cabal/config
+   echo 'constraint: deepseq installed' >> $HOME/.cabal/config
+   echo 'constraint: directory installed' >> $HOME/.cabal/config
+   echo 'constraint: filepath installed' >> $HOME/.cabal/config
+   echo 'constraint: ghc installed' >> $HOME/.cabal/config
+   echo 'constraint: ghc-prim installed' >> $HOME/.cabal/config
+   echo 'constraint: haskeline installed' >> $HOME/.cabal/config
+   echo 'constraint: hoopl installed' >> $HOME/.cabal/config
+   echo 'constraint: hpc installed' >> $HOME/.cabal/config
+   echo 'constraint: integer-gmp installed' >> $HOME/.cabal/config
+   echo 'constraint: integer-simple installed' >> $HOME/.cabal/config
+   echo 'constraint: pretty installed' >> $HOME/.cabal/config
+   echo 'constraint: process installed' >> $HOME/.cabal/config
+   echo 'constraint: rts installed' >> $HOME/.cabal/config
+   echo 'constraint: template-haskell installed' >> $HOME/.cabal/config
+   echo 'constraint: terminfo installed' >> $HOME/.cabal/config
+   echo 'constraint: time installed' >> $HOME/.cabal/config
+   echo 'constraint: transformers installed' >> $HOME/.cabal/config
+   echo 'constraint: unix installed' >> $HOME/.cabal/config
+   echo 'constraint: xhtml installed' >> $HOME/.cabal/config
 
 install:
  - echo "$(ghc --version) [$(ghc --print-project-git-commit-id 2> /dev/null || echo '?')]"
