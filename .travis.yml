@@ -91,6 +91,17 @@ before_install:
      curl -L https://www.stackage.org/stack/linux-x86_64 | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack';
    fi
 
+ - |
+   echo 'remote-repo: hackage.haskell.org:http://hackage.fpcomplete.com/' > $HOME/.cabal/config
+   echo 'remote-repo-cache: $HOME/.cabal/packages' >> $HOME/.cabal/config
+
+   if [ "$CABALVER" != "1.16" ]
+   then
+     echo 'jobs: $ncpus' >> $HOME/.cabal/config
+   fi
+
+   echo 'constraint: binary installed' >> $HOME/.cabal/config
+
 install:
  - echo "$(ghc --version) [$(ghc --print-project-git-commit-id 2> /dev/null || echo '?')]"
  - if [ -f configure.ac ]; then autoreconf -i; fi
