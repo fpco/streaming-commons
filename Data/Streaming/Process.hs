@@ -3,7 +3,7 @@
 -- | A full tutorial for this module is available on FP School of Haskell:
 -- <https://www.fpcomplete.com/user/snoyberg/library-documentation/data-conduit-process>.
 --
--- Note that, while the tutorial covers @Data.Streaming.Process@, this module is
+-- Note that, while the tutorial covers @Data.Conduit.Process@, this module is
 -- the basis of the streaming version, and almost all concepts there apply here.
 module Data.Streaming.Process
     ( -- * Functions
