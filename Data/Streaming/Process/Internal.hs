@@ -34,3 +34,4 @@ instance OutputSink Handle where
 data StreamingProcessHandle = StreamingProcessHandle
     ProcessHandle
     (TMVar ExitCode)
+    (IO ()) -- cleanup resources

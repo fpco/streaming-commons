@@ -1,3 +1,7 @@
+## 0.1.16
+
+* Add `closeStreamingProcessHandle`
+
 ## 0.1.15.5
 
 * Make getSocket{Family}TCP try all addr candidates [#32](https://github.com/fpco/streaming-commons/pull/32)

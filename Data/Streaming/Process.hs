@@ -8,6 +8,7 @@
 module Data.Streaming.Process
     ( -- * Functions
       streamingProcess
+    , closeStreamingProcessHandle
       -- * Specialized streaming types
     , Inherited (..)
     , ClosedStream (..)
@@ -36,7 +37,7 @@ import           Control.Concurrent.STM          (STM, TMVar, atomically,
                                                   newEmptyTMVar, putTMVar,
                                                   readTMVar)
 import           Control.Exception               (Exception, throwIO, try, throw,
-                                                  SomeException)
+                                                  SomeException, finally)
 import           Control.Monad.IO.Class          (MonadIO, liftIO)
 import           Data.Maybe                      (fromMaybe)
 import           Data.Streaming.Process.Internal
@@ -125,14 +126,14 @@ getStreamingProcessExitCodeSTM = tryReadTMVar . streamingProcessHandleTMVar
 --
 -- Since 0.1.4
 streamingProcessHandleRaw :: StreamingProcessHandle -> ProcessHandle
-streamingProcessHandleRaw (StreamingProcessHandle ph _) = ph
+streamingProcessHandleRaw (StreamingProcessHandle ph _ _) = ph
 
 -- | Get the @TMVar@ storing the process exit code. In general, one of the
 -- above functions should be used instead to avoid accidentally corrupting the variable\'s state..
 --
 -- Since 0.1.4
 streamingProcessHandleTMVar :: StreamingProcessHandle -> TMVar ExitCode
-streamingProcessHandleTMVar (StreamingProcessHandle _ var) = var
+streamingProcessHandleTMVar (StreamingProcessHandle _ var _) = var
 
 -- | The primary function for running a process. Note that, with the
 -- exception of 'UseProvidedHandle', the values for @std_in@, @std_out@
@@ -169,11 +170,22 @@ streamingProcess cp = liftIO $ do
               (throw :: SomeException -> a)
               id
 
+    let close =
+            mclose stdinH `finally` mclose stdoutH `finally` mclose stderrH
+          where
+            mclose = maybe (return ()) hClose
+
     (,,,)
         <$> getStdin stdinH
         <*> getStdout stdoutH
         <*> getStderr stderrH
-        <*> return (StreamingProcessHandle ph ec)
+        <*> return (StreamingProcessHandle ph ec close)
+
+-- | Free any resources (e.g. @Handle@s) acquired by a call to 'streamingProcess'.
+--
+-- @since 0.1.16
+closeStreamingProcessHandle :: MonadIO m => StreamingProcessHandle -> m ()
+closeStreamingProcessHandle (StreamingProcessHandle _ _ f) = liftIO f
 
 -- | Indicates that a process exited with an non-success exit code.
 --
@@ -202,9 +214,10 @@ instance Exception ProcessExitedUnsuccessfully
 -- code. If the exit code is not a success, throw a
 -- 'ProcessExitedUnsuccessfully'.
 --
--- NOTE: This function does not kill the child process in the event of an
--- exception from the provided function. For that, please use
--- @withCheckedProcessCleanup@ from the @conduit-extra@ package.
+-- NOTE: This function does not kill the child process or ensure
+-- resources are cleaned up in the event of an exception from the
+-- provided function. For that, please use @withCheckedProcessCleanup@
+-- from the @conduit-extra@ package.
 --
 -- Since 0.1.7
 withCheckedProcess :: ( InputSource stdin
@@ -218,7 +231,8 @@ withCheckedProcess :: ( InputSource stdin
 withCheckedProcess cp f = do
     (x, y, z, sph) <- streamingProcess cp
     res <- f x y z
-    ec <- waitForStreamingProcess sph
-    if ec == ExitSuccess
-        then return res
-        else liftIO $ throwIO $ ProcessExitedUnsuccessfully cp ec
+    liftIO $ do
+        ec <- waitForStreamingProcess sph `finally` closeStreamingProcessHandle sph
+        if ec == ExitSuccess
+            then return res
+            else throwIO $ ProcessExitedUnsuccessfully cp ec
