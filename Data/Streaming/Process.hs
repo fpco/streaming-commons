@@ -1,7 +1,7 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveDataTypeable #-}
--- | A full tutorial for this module is available on FP School of Haskell:
--- <https://www.fpcomplete.com/user/snoyberg/library-documentation/data-conduit-process>.
+-- | A full tutorial for this module is available at:
+-- <https://github.com/snoyberg/conduit/blob/master/PROCESS.md>.
 --
 -- Note that, while the tutorial covers @Data.Conduit.Process@, that module closely
 -- follows the present one, and almost all concepts in the tutorial apply here.
