@@ -61,6 +61,7 @@ module Data.Streaming.Network
       -- * Functions
       -- ** General
     , bindPortGen
+    , bindPortGenEx
     , bindRandomPortGen
     , getSocketGen
     , getSocketFamilyGen
@@ -138,10 +139,21 @@ getSocketFamilyGen sockettype host' port' af = do
 getSocketGen :: SocketType -> String -> Int -> IO (Socket, AddrInfo)
 getSocketGen sockettype host port = getSocketFamilyGen sockettype host port NS.AF_UNSPEC
 
+defaultSocketOptions :: SocketType -> [(NS.SocketOption, Int)]
+defaultSocketOptions sockettype =
+    case sockettype of
+        NS.Datagram -> [(NS.ReuseAddr,1)]
+        _           -> [(NS.NoDelay,1), (NS.ReuseAddr,1)]
+
 -- | Attempt to bind a listening @Socket@ on the given host/port using given
 -- @SocketType@. If no host is given, will use the first address available.
 bindPortGen :: SocketType -> Int -> HostPreference -> IO Socket
-bindPortGen sockettype p s = do
+bindPortGen sockettype = bindPortGenEx (defaultSocketOptions sockettype) sockettype
+
+-- | Attempt to bind a listening @Socket@ on the given host/port using given
+-- socket options and @SocketType@. If no host is given, will use the first address available.
+bindPortGenEx :: [(NS.SocketOption, Int)] -> SocketType -> Int -> HostPreference -> IO Socket
+bindPortGenEx sockOpts sockettype p s = do
     let hints = NS.defaultHints
             { NS.addrFlags = [ NS.AI_PASSIVE
                              , NS.AI_NUMERICSERV
@@ -173,11 +185,6 @@ bindPortGen sockettype p s = do
                                       (\(_ :: IOException) -> tryAddrs rest)
         tryAddrs (addr1:[])         = theBody addr1
         tryAddrs _                  = error "bindPort: addrs is empty"
-
-        sockOpts =
-            case sockettype of
-                NS.Datagram -> [(NS.ReuseAddr,1)]
-                _           -> [(NS.NoDelay,1), (NS.ReuseAddr,1)]
 
         theBody addr =
           bracketOnError
