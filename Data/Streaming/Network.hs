@@ -152,6 +152,8 @@ bindPortGen sockettype = bindPortGenEx (defaultSocketOptions sockettype) sockett
 
 -- | Attempt to bind a listening @Socket@ on the given host/port using given
 -- socket options and @SocketType@. If no host is given, will use the first address available.
+--
+-- Since 0.1.17
 bindPortGenEx :: [(NS.SocketOption, Int)] -> SocketType -> Int -> HostPreference -> IO Socket
 bindPortGenEx sockOpts sockettype p s = do
     let hints = NS.defaultHints

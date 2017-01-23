@@ -1,3 +1,7 @@
+## 0.1.17
+
+* Add `bindPortGenEx`
+
 ## 0.1.16
 
 * Add `closeStreamingProcessHandle`
