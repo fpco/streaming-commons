@@ -5,7 +5,7 @@ module Data.Streaming.Network
     ( -- * Types
       ServerSettings
     , ClientSettings
-    , HostPreference
+    , HostPreference (..)
     , Message (..)
     , AppData
 #if !WINDOWS
