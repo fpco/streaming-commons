@@ -284,6 +284,8 @@ getUnusedInflate (Inflate (fzstr, _) ref _ _) = do
 
 -- | Returns True if the inflater has reached end-of-stream, or False if
 -- it is still expecting more data.
+--
+-- Since 0.1.18
 isCompleteInflate :: Inflate -> IO Bool
 isCompleteInflate (Inflate _ _ complete _) = readIORef complete
 
