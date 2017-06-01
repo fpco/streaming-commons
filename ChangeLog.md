@@ -1,3 +1,7 @@
+## 0.1.18
+
+* Add `isCompleteInflate`
+
 ## 0.1.17
 
 * Add `bindPortGenEx`
