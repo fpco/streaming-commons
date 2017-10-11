@@ -211,7 +211,7 @@ feedInflate (Inflate (fzstr, fbuff) lastBS complete inflateDictionary) bs = do
         when (res2 == zStreamEnd) (writeIORef complete True)
         return res2
 
--- | An IO action that returns the next chunk of data, returning 'Nothing' when
+-- | An IO action that returns the next chunk of data, returning 'PRDone' when
 -- there is no more data to be popped.
 type Popper = IO PopperRes
 
