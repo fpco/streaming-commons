@@ -19,6 +19,7 @@ module Data.Streaming.ByteString.Builder
     ( BuilderRecv
     , BuilderPopper
     , BuilderFinish
+    , newBuilderRecv
     , newByteStringBuilderRecv
 
     -- * toByteStringIO
@@ -74,6 +75,10 @@ type BuilderPopper = IO S.ByteString
 type BuilderRecv = Builder -> IO BuilderPopper
 
 type BuilderFinish = IO (Maybe S.ByteString)
+
+newBuilderRecv :: BufferAllocStrategy -> IO (BuilderRecv, BuilderFinish)
+newBuilderRecv = newByteStringBuilderRecv
+{-# INLINE newBuilderRecv #-}
 
 newByteStringBuilderRecv :: BufferAllocStrategy -> IO (BuilderRecv, BuilderFinish)
 newByteStringBuilderRecv (ioBufInit, nextBuf) = do

@@ -3,14 +3,13 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 module Data.Streaming.ByteString.BuilderSpec
     ( spec
-    , builderSpec
-    , BuilderFunctions(..)
     ) where
 
 import qualified Data.ByteString as S
 import Data.ByteString.Char8 ()
 import qualified Data.ByteString.Unsafe as S
 import qualified Data.ByteString.Builder as B
+import Data.ByteString.Builder (Builder)
 import qualified Data.ByteString.Builder.Internal as B
 import qualified Data.ByteString.Lazy as L
 import Data.ByteString.Lazy.Char8 ()
@@ -21,17 +20,8 @@ import Test.Hspec
 import Test.Hspec.QuickCheck (prop)
 
 import Data.Streaming.ByteString.Builder
-import Data.Streaming.ByteString.Builder.Class
 
-data BuilderFunctions b = BuilderFunctions
-    { bfFromByteString       :: S.ByteString -> b
-    , bfInsertLazyByteString :: L.ByteString -> b
-    , bfToLazyByteString     :: b -> L.ByteString
-    , bfInsertByteString     :: S.ByteString -> b
-    , bfCopyByteString       :: S.ByteString -> b
-    }
-
-tester :: StreamingBuilder b => BufferAllocStrategy -> [b] -> IO [S.ByteString]
+tester :: BufferAllocStrategy -> [Builder] -> IO [S.ByteString]
 tester strat builders0 = do
     (recv, finish) <- newBuilderRecv strat
     let loop front [] = do
@@ -47,15 +37,14 @@ tester strat builders0 = do
             go front0
     loop id builders0
 
-testerFlush :: StreamingBuilder b
-            => BufferAllocStrategy -> [Maybe b] -> IO [Maybe S.ByteString]
+testerFlush :: BufferAllocStrategy -> [Maybe Builder] -> IO [Maybe S.ByteString]
 testerFlush strat builders0 = do
     (recv, finish) <- newBuilderRecv strat
     let loop front [] = do
             mbs <- finish
             return $ front $ maybe [] (return . Just) mbs
         loop front0 (mbu:bus) = do
-            popper <- recv $ fromMaybe builderFlush mbu
+            popper <- recv $ fromMaybe B.flush mbu
             let go front = do
                     bs <- popper
                     if S.null bs
@@ -67,55 +56,48 @@ testerFlush strat builders0 = do
             go front0
     loop id builders0
 
-builderSpec :: forall b. StreamingBuilder b => BuilderFunctions b -> Spec
-builderSpec BuilderFunctions{..} = do
+builderSpec :: Spec
+builderSpec = do
     prop "idempotent to toLazyByteString" $ \bss' -> do
         let bss = map S.pack bss'
-        let builders :: [b]
-            builders = map bfFromByteString bss
-        let lbs = bfToLazyByteString $ mconcat builders
+        let builders = map B.byteString bss
+        let lbs = B.toLazyByteString $ mconcat builders
         outBss <- tester defaultStrategy builders
         L.fromChunks outBss `shouldBe` lbs
 
     it "works for large input" $ do
-        let builders :: [b]
-            builders = replicate 10000 (bfFromByteString "hello world!" :: b)
-        let lbs = bfToLazyByteString $ mconcat builders
+        let builders = replicate 10000 (B.byteString "hello world!")
+        let lbs = B.toLazyByteString $ mconcat builders
         outBss <- tester defaultStrategy builders
         L.fromChunks outBss `shouldBe` lbs
 
     it "works for lazy bytestring insertion" $ do
-        let builders :: [b]
-            builders = replicate 10000 (bfInsertLazyByteString "hello world!")
-        let lbs = bfToLazyByteString $ mconcat builders
+        let builders = replicate 10000 (B.lazyByteStringInsert "hello world!")
+        let lbs = B.toLazyByteString $ mconcat builders
         outBss <- tester defaultStrategy builders
         L.fromChunks outBss `shouldBe` lbs
 
     prop "works for strict bytestring insertion" $ \bs' -> do
         let bs = S.pack bs'
-        let builders :: [b]
-            builders = replicate 10000 (bfCopyByteString bs `Data.Monoid.mappend` bfInsertByteString bs)
-        let lbs = bfToLazyByteString $ mconcat builders
+        let builders = replicate 10000 (B.byteStringCopy bs `Data.Monoid.mappend` B.byteStringInsert bs)
+        let lbs = B.toLazyByteString $ mconcat builders
         outBss <- tester defaultStrategy builders
         L.fromChunks outBss `shouldBe` lbs
 
     it "flush shouldn't bring in empty strings." $ do
         let dat = ["hello", "world"]
-            builders :: [b]
-            builders = map ((`mappend` builderFlush) . bfFromByteString) dat
+            builders = map ((`mappend` B.flush) . B.byteString) dat
         out <- tester defaultStrategy builders
         dat `shouldBe` out
 
     prop "flushing" $ \bss' -> do
         let bss = concatMap (\bs -> [Just $ S.pack bs, Nothing]) $ filter (not . null) bss'
-        let builders :: [Maybe b]
-            builders = map (fmap bfFromByteString) bss
+        let builders = map (fmap B.byteString) bss
         outBss <- testerFlush defaultStrategy builders
         outBss `shouldBe` bss
     it "large flush input" $ do
         let lbs = L.pack $ concat $ replicate 100000 [0..255]
-            chunks :: [Maybe b]
-            chunks = map (Just . bfFromByteString) (L.toChunks lbs)
+            chunks = map (Just . B.byteString) (L.toChunks lbs)
         bss <- testerFlush defaultStrategy chunks
         L.fromChunks (catMaybes bss) `shouldBe` lbs
 
@@ -123,13 +105,7 @@ spec :: Spec
 spec =
     describe "Data.Streaming.ByteString.Builder" $ do
 
-        builderSpec BuilderFunctions
-            { bfFromByteString       = B.byteString
-            , bfInsertLazyByteString = B.lazyByteStringInsert
-            , bfToLazyByteString     = B.toLazyByteString
-            , bfInsertByteString     = B.byteStringInsert
-            , bfCopyByteString       = B.byteStringCopy
-            }
+        builderSpec
 
         prop "toByteStringIO idempotent to toLazyByteString" $ \bss' -> do
             let bss = mconcat (map (B.byteString . S.pack) bss')

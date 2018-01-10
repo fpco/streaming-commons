@@ -40,8 +40,6 @@ module Data.Streaming.ByteString.Builder.Buffer
 
 import Data.ByteString.Lazy.Internal (defaultChunkSize)
 
-#if MIN_VERSION_blaze_builder(0,4,0)
-
 import qualified Data.ByteString as S
 import qualified Data.ByteString.Internal as S
 import Foreign (Word8, ForeignPtr, Ptr, plusPtr, minusPtr)
@@ -196,13 +194,6 @@ reuseBufferStrategy buf0 =
     tryReuseBuffer reqSize buf
       | bufferSize buf >= reqSize = return $ return (reuseBuffer buf)
       | otherwise                 = return $ allocBuffer reqSize
-
-
-#else  /* !MIN_VERSION_blaze_builder(0,4,0) */
-
-import Blaze.ByteString.Builder.Internal.Buffer
-
-#endif /* !MIN_VERSION_blaze_builder(0,4,0) */
 
 defaultStrategy :: BufferAllocStrategy
 defaultStrategy = allNewBuffersStrategy defaultChunkSize

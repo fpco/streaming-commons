@@ -1,3 +1,7 @@
+## 0.2.0
+
+* Drop `blaze-builder` dependency
+
 ## 0.1.19
 
 * Update `getAddrInfo` hints to allow hostnames and portnames [#46](https://github.com/fpco/streaming-commons/issues/46)
