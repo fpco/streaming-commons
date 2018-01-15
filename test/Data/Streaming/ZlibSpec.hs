@@ -31,6 +31,7 @@ decompress' gziped = unsafePerformIO $ do
         case y of
             PRDone -> return front
             PRNext z -> go (front . (:) z) x
+            PRError e -> throwIO e
 
 instance Arbitrary L.ByteString where
     arbitrary = L.fromChunks `fmap` arbitrary
@@ -50,6 +51,7 @@ compress' raw = unsafePerformIO $ do
         case y of
             PRDone -> return front
             PRNext z -> go (front . (:) z) x
+            PRError e -> throwIO e
 
 license :: S.ByteString
 license = S8.filter (/= '\r') $ unsafePerformIO $ S.readFile "LICENSE"
@@ -70,6 +72,7 @@ deflateWithDict dict raw = unsafePerformIO $ do
         case y of
             PRDone -> return front
             PRNext z -> go (front . (:) z) x
+            PRError e -> throwIO e
 
 inflateWithDict :: S.ByteString -> L.ByteString -> L.ByteString
 inflateWithDict dict compressed = unsafePerformIO $ do
@@ -84,6 +87,7 @@ inflateWithDict dict compressed = unsafePerformIO $ do
         case y of
             PRDone -> return front
             PRNext z -> go (front . (:) z) x
+            PRError e -> throwIO e
 
 spec :: Spec
 spec = describe "Data.Streaming.Zlib" $ do
@@ -107,6 +111,7 @@ spec = describe "Data.Streaming.Zlib" $ do
                     case y of
                         PRDone -> return front
                         PRNext z -> go (front . (:) z) x
+                        PRError e -> throwIO e
             def <- initDeflate 8 $ WindowBits 31
             gziped <- feedDeflate def license >>= go id
             gziped' <- go gziped $ finishDeflate def
@@ -119,6 +124,7 @@ spec = describe "Data.Streaming.Zlib" $ do
                     case y of
                         PRDone -> return front
                         PRNext z -> go (front . (:) z) x
+                        PRError e -> throwIO e
             gziped <- S.readFile "test/LICENSE.gz"
             inf <- initInflate $ WindowBits 31
             popper <- feedInflate inf gziped
@@ -133,6 +139,7 @@ spec = describe "Data.Streaming.Zlib" $ do
                     case y of
                         PRDone -> return front
                         PRNext z -> go (front . (:) z) x
+                        PRError e -> throwIO e
             def <- initDeflate 5 $ WindowBits 31
             gziped <- foldM (go' def) id $ map S.singleton $ S.unpack license
             gziped' <- go gziped $ finishDeflate def
@@ -146,6 +153,7 @@ spec = describe "Data.Streaming.Zlib" $ do
                     case y of
                         PRDone -> return front
                         PRNext z -> go (front . (:) z) x
+                        PRError e -> throwIO e
             gziped <- S.readFile "test/LICENSE.gz"
             let gziped' = map S.singleton $ S.unpack gziped
             inf <- initInflate $ WindowBits 31
@@ -162,6 +170,7 @@ spec = describe "Data.Streaming.Zlib" $ do
                     case y of
                         PRDone -> return front
                         PRNext z -> go (front . (:) z) x
+                        PRError e -> throwIO e
             inf <- initInflate defaultWindowBits
             inflated <- foldM (go' inf) id $ L.toChunks glbs
             final <- finishInflate inf
@@ -173,6 +182,7 @@ spec = describe "Data.Streaming.Zlib" $ do
                     case y of
                         PRDone -> return front
                         PRNext z -> go (front . (:) z) x
+                        PRError e -> throwIO e
             def <- initDeflate 7 defaultWindowBits
             deflated <- foldM (go' def) id $ L.toChunks lbs
             deflated' <- go deflated $ finishDeflate def
@@ -191,6 +201,7 @@ spec = describe "Data.Streaming.Zlib" $ do
                             PRNext x -> do
                                 xs <- popList pop
                                 return $ x : xs
+                            PRError e -> throwIO e
 
                 let callback name expected pop = do
                         bssDeflated <- popList pop
@@ -256,6 +267,7 @@ decompressRaw gziped = do
         case y of
             PRDone -> return front
             PRNext z -> go (front . (:) z) x
+            PRError e -> throwIO e
 
 compressRaw :: L.ByteString -> IO L.ByteString
 compressRaw raw = do
@@ -270,3 +282,4 @@ compressRaw raw = do
         case y of
             PRDone -> return front
             PRNext z -> go (front . (:) z) x
+            PRError e -> throwIO e

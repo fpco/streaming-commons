@@ -7,7 +7,7 @@ import Control.Exception (bracket)
 import Data.List (sort)
 #if !WINDOWS
 import System.Posix.Files (removeLink, createSymbolicLink, createNamedPipe)
-import Control.Exception (bracket, try, IOException)
+import Control.Exception (try, IOException)
 #endif
 
 spec :: Spec

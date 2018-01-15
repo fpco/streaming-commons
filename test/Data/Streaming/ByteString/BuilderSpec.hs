@@ -94,7 +94,7 @@ builderSpec BuilderFunctions{..} = do
     prop "works for strict bytestring insertion" $ \bs' -> do
         let bs = S.pack bs'
         let builders :: [b]
-            builders = replicate 10000 (bfCopyByteString bs `mappend` bfInsertByteString bs)
+            builders = replicate 10000 (bfCopyByteString bs `Data.Monoid.mappend` bfInsertByteString bs)
         let lbs = bfToLazyByteString $ mconcat builders
         outBss <- tester defaultStrategy builders
         L.fromChunks outBss `shouldBe` lbs
