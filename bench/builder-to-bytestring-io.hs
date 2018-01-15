@@ -1,6 +1,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
-import Criterion.Main
+import Gauge.Main
 import qualified Data.ByteString.Char8 as S
 import qualified Data.ByteString.Builder as BB
 import Data.Monoid (mconcat, Monoid)
