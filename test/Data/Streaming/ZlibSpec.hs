@@ -18,6 +18,7 @@ import Control.Monad (foldM, forM_, forM)
 import System.IO.Unsafe (unsafePerformIO)
 import qualified Codec.Compression.Zlib.Raw as Raw
 
+
 decompress' :: L.ByteString -> L.ByteString
 decompress' gziped = unsafePerformIO $ do
     inf <- initInflate defaultWindowBits

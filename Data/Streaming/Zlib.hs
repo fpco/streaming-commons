@@ -19,8 +19,11 @@
 -- You can see a more complete example is available in the included
 -- file-test.hs.
 module Data.Streaming.Zlib
-    ( -- * Inflate
-      Inflate
+    ( -- * High-level API
+      decompressM
+    , compressM
+      -- * Inflate
+    , Inflate
     , initInflate
     , initInflateWithDictionary
     , feedInflate
@@ -50,11 +53,44 @@ import Foreign.C.Types
 import Data.ByteString.Unsafe
 import Codec.Compression.Zlib (WindowBits(WindowBits), defaultWindowBits)
 import qualified Data.ByteString as S
+import qualified Data.ByteString.Lazy as L
 import Data.ByteString.Lazy.Internal (defaultChunkSize)
 import Data.Typeable (Typeable)
 import Control.Exception (Exception)
-import Control.Monad (when)
+import Control.Monad (foldM, when)
 import Data.IORef
+
+
+
+decompressM :: L.ByteString -> IO L.ByteString
+decompressM gziped = do
+    inf <- initInflate defaultWindowBits
+    ungziped <- foldM (go' inf) id $ L.toChunks gziped
+    final <- finishInflate inf
+    return $ L.fromChunks $ ungziped [final]
+  where
+    go' inf front bs = feedInflate inf bs >>= go front
+    go front x = do
+        y <- x
+        case y of
+            PRDone -> return front
+            PRNext z -> go (front . (:) z) x
+
+compressM :: L.ByteString -> IO L.ByteString
+compressM raw = do
+    def <- initDeflate 7 defaultWindowBits
+    gziped <- foldM (go' def) id $ L.toChunks raw
+    gziped' <- go gziped $ finishDeflate def
+    return $ L.fromChunks $ gziped' []
+  where
+    go' def front bs = feedDeflate def bs >>= go front
+    go front x = do
+        y <- x
+        case y of
+            PRDone -> return front
+            PRNext z -> go (front . (:) z) x            
+
+
 
 type ZStreamPair = (ForeignPtr ZStreamStruct, ForeignPtr CChar)
 
