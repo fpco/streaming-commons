@@ -31,7 +31,7 @@ module Data.Streaming.Process
     , module System.Process
     ) where
 
-import           Control.Applicative             ((<$>), (<*>))
+import           Control.Applicative             as A ((<$>), (<*>))
 import           Control.Concurrent              (forkIOWithUnmask)
 import           Control.Concurrent.STM          (STM, TMVar, atomically,
                                                   newEmptyTMVar, putTMVar,
@@ -176,8 +176,8 @@ streamingProcess cp = liftIO $ do
             mclose = maybe (return ()) hClose
 
     (,,,)
-        <$> getStdin stdinH
-        <*> getStdout stdoutH
+      A.<$> getStdin stdinH
+      A.<*> getStdout stdoutH
         <*> getStderr stderrH
         <*> return (StreamingProcessHandle ph ec close)
 

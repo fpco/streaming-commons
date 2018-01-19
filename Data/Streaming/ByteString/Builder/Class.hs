@@ -34,7 +34,7 @@ instance StreamingBuilder Blaze.ByteString.Builder.Builder where
 --
 -- Since 0.1.10.0
 --
-class Monoid b => StreamingBuilder b where
+class Data.Monoid.Monoid b => StreamingBuilder b where
     newBuilderRecv :: BufferAllocStrategy -> IO (b -> IO BuilderPopper, BuilderFinish)
     builderFlush   :: b
 

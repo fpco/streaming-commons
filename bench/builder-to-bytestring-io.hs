@@ -3,7 +3,7 @@
 import Gauge.Main
 import qualified Data.ByteString.Char8 as S
 import qualified Data.ByteString.Builder as BB
-import Data.Monoid (mconcat, Monoid)
+import Data.Monoid
 import qualified Data.Streaming.ByteString.Builder as BB
 
 main :: IO ()
@@ -25,5 +25,5 @@ main = defaultMain [ bgroup "Data.Streaming.ByteString.Builder.toByteStringIO"
     b100_10000 = bld BB.byteString 100 10000
     b10000_100 = bld BB.byteString 10000 100
     b10000_10000 = bld BB.byteString 10000 10000
-    bld :: Monoid a => (S.ByteString -> a) -> Int -> Int -> a
+    bld :: Data.Monoid.Monoid a => (S.ByteString -> a) -> Int -> Int -> a
     bld f len reps = mconcat (replicate reps (f (S.replicate len 'x')))
