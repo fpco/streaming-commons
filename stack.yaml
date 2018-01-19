@@ -1,1 +1,4 @@
 resolver: lts-6.17
+extra-deps:
+- gauge-0.2.1
+- basement-0.0.5
