@@ -218,7 +218,7 @@ script:
         cd "$PKGVER"
         cabal configure --enable-tests --enable-benchmarks --ghc-options -O0
         cabal build
-        cabal test --show-details=streaming
+        travis_wait cabal test
         cd $ORIGDIR
       done
       ;;
