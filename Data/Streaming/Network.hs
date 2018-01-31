@@ -158,8 +158,7 @@ bindPortGenEx :: [(NS.SocketOption, Int)] -> SocketType -> Int -> HostPreference
 bindPortGenEx sockOpts sockettype p s = do
     let hints = NS.defaultHints
             { NS.addrFlags = [ NS.AI_PASSIVE
-                             , NS.AI_NUMERICSERV
-                             , NS.AI_NUMERICHOST
+                             , NS.AI_ADDRCONFIG
                              ]
             , NS.addrSocketType = sockettype
             }
