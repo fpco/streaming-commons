@@ -1,3 +1,7 @@
+## 0.1.19
+
+* Update `getAddrInfo` hints to allow hostnames and portnames [#46](https://github.com/fpco/streaming-commons/issues/46)
+
 ## 0.1.18
 
 * Add `isCompleteInflate`
