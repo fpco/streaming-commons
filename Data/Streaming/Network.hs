@@ -112,7 +112,8 @@ import System.IO.Unsafe (unsafePerformIO)
 import System.Random (randomRIO)
 import System.IO.Error (isFullErrorType, ioeGetErrorType)
 #if WINDOWS
-import Control.Concurrent.MVar (putMVar, takeMVar, newEmptyMVar)
+import Control.Concurrent.MVar (putMVar, takeMVar, newEmptyMVar, MVar)
+import Control.Monad (void)
 #endif
 
 getPossibleAddrs :: SocketType -> String -> Int -> NS.Family -> IO [AddrInfo]
@@ -345,22 +346,8 @@ clientSettingsUnix path = ClientSettingsUnix
     }
 #endif
 
-#if defined(__GLASGOW_HASKELL__) && WINDOWS
--- Socket recv and accept calls on Windows platform cannot be interrupted when compiled with -threaded.
--- See https://ghc.haskell.org/trac/ghc/ticket/5797 for details.
--- The following enables simple workaround
-#define SOCKET_ACCEPT_RECV_WORKAROUND
-#endif
-
 safeRecv :: Socket -> Int -> IO ByteString
-#ifndef SOCKET_ACCEPT_RECV_WORKAROUND
-safeRecv = recv
-#else
-safeRecv s buf = do
-    var <- newEmptyMVar
-    forkIO $ recv s buf `E.catch` (\(_::IOException) -> return S8.empty) >>= putMVar var
-    takeMVar var
-#endif
+safeRecv s i = windowsThreadBlockHack $ recv s i
 
 -- | Smart constructor.
 serverSettingsUDP
@@ -471,16 +458,10 @@ bindRandomPortTCP s = do
 -- second, and then try again.
 acceptSafe :: Socket -> IO (Socket, NS.SockAddr)
 acceptSafe socket =
-#ifndef SOCKET_ACCEPT_RECV_WORKAROUND
     loop
-#else
-    do var <- newEmptyMVar
-       forkIO $ loop >>= putMVar var
-       takeMVar var
-#endif
   where
     loop =
-        NS.accept socket `E.catch` \e ->
+        windowsThreadBlockHack (NS.accept socket) `E.catch` \e ->
             if isFullErrorType (ioeGetErrorType e)
                 then do
                     threadDelay 1000000
@@ -712,4 +693,18 @@ runUnixClient (ClientSettingsUnix path readBufferSize) app = E.bracket
         { appReadUnix = safeRecv sock readBufferSize
         , appWriteUnix = sendAll sock
         })
+#endif
+
+-- | See <https://github.com/yesodweb/wai/pull/250>
+windowsThreadBlockHack :: IO a -> IO a
+#if WINDOWS
+windowsThreadBlockHack act = do
+    var <- newEmptyMVar :: IO (MVar (Either SomeException a))
+    void . forkIO $ try act >>= putMVar var
+    res <- takeMVar var
+    case res of
+      Left  e -> throwIO e
+      Right r -> return r
+#else
+windowsThreadBlockHack = id
 #endif
