@@ -267,7 +267,7 @@ getUnassignedPort = do
 skipUnassigned :: Int -> IO ()
 skipUnassigned i = do
     !() <- atomicModifyIORef nextUnusedPort $ \j ->
-        let k = i + j `mod` unassignedPortsMax
+        let k = (i + j) `mod` unassignedPortsMax
          in k `seq` (k, ())
     return ()
 
