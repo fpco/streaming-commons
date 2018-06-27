@@ -200,9 +200,6 @@ bindPortGenEx sockOpts sockettype p s = do
 
 -- | Bind to a random port number. Especially useful for writing network tests.
 --
--- This will attempt 30 different port numbers before giving up and throwing an
--- exception.
---
 -- Since 0.1.1
 bindRandomPortGen :: SocketType -> HostPreference -> IO (Int, Socket)
 bindRandomPortGen sockettype s = do
