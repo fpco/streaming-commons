@@ -205,24 +205,10 @@ bindPortGenEx sockOpts sockettype p s = do
 --
 -- Since 0.1.1
 bindRandomPortGen :: SocketType -> HostPreference -> IO (Int, Socket)
-bindRandomPortGen sockettype s =
-    loop (30 :: Int)
-  where
-    loop cnt = do
-        port <- getUnassignedPort
-        esocket <- try $ bindPortGen sockettype port s
-        case esocket :: Either IOException Socket of
-            Left e
-                | cnt <= 1 -> error $ concat
-                    [ "Data.Streaming.Network.bindRandomPortGen: Could not get port. Last attempted: "
-                    , show port
-                    , ". Exception was: "
-                    , show e
-                    ]
-                | otherwise -> do
-                    skipUnassigned 50
-                    loop $! cnt - 1
-            Right socket -> return (port, socket)
+bindRandomPortGen sockettype s = do
+  socket <- bindPortGen sockettype 0 s
+  port <- NS.socketPort socket
+  return (fromIntegral port, socket)
 
 -- | Top 10 Largest IANA unassigned port ranges with no unauthorized uses known
 unassignedPortsList :: [Int]
@@ -262,14 +248,6 @@ getUnassignedPort = do
     go i
         | i > unassignedPortsMax = (succ unassignedPortsMin, unassignedPorts ! unassignedPortsMin)
         | otherwise = (succ i, unassignedPorts ! i)
-
--- | Skip ahead in the unassigned ports list by the given number
-skipUnassigned :: Int -> IO ()
-skipUnassigned i = do
-    !() <- atomicModifyIORef nextUnusedPort $ \j ->
-        let k = (i + j) `mod` unassignedPortsMax
-         in k `seq` (k, ())
-    return ()
 
 -- | Attempt to connect to the given host/port.
 getSocketUDP :: String -> Int -> IO (Socket, AddrInfo)
