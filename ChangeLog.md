@@ -1,3 +1,7 @@
+## 0.2.1.0
+
+* Change `bindRandomPortGen` to use binding to port 0
+
 ## 0.2.0
 
 * Drop `blaze-builder` dependency
