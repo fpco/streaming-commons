@@ -14,13 +14,17 @@
 void _hs_streaming_commons_memcpy(void *dest, size_t doff, const void *src, size_t soff,
 		     size_t n)
 {
-  memcpy(dest + (doff<<1), src + (soff<<1), n<<1);
+  char *cdest = dest;
+  const char *csrc = src;
+  memcpy(cdest + (doff<<1), csrc + (soff<<1), n<<1);
 }
 
 int _hs_streaming_commons_memcmp(const void *a, size_t aoff, const void *b, size_t boff,
 		    size_t n)
 {
-  return memcmp(a + (aoff<<1), b + (boff<<1), n<<1);
+  const char *ca = a;
+  const char *cb = b;
+  return memcmp(ca + (aoff<<1), cb + (boff<<1), n<<1);
 }
 
 #define UTF8_ACCEPT 0
@@ -68,8 +72,8 @@ decode(uint32_t *state, uint32_t* codep, uint32_t byte) {
  * an UTF16 array
  */
 void
-_hs_streaming_commons_decode_latin1(uint16_t *dest, const uint8_t const *src,
-                       const uint8_t const *srcend)
+_hs_streaming_commons_decode_latin1(uint16_t *dest, const uint8_t *src,
+                       const uint8_t *srcend)
 {
   const uint8_t *p = src;
 
@@ -130,14 +134,14 @@ _hs_streaming_commons_decode_latin1(uint16_t *dest, const uint8_t const *src,
 #if defined(__GNUC__) || defined(__clang__)
 static inline uint8_t const *
 _hs_streaming_commons_decode_utf8_int(uint16_t *const dest, size_t *destoff,
-			 const uint8_t const **src, const uint8_t const *srcend,
+			 const uint8_t **src, const uint8_t *srcend,
 			 uint32_t *codepoint0, uint32_t *state0)
   __attribute((always_inline));
 #endif
 
 static inline uint8_t const *
 _hs_streaming_commons_decode_utf8_int(uint16_t *const dest, size_t *destoff,
-			 const uint8_t const **src, const uint8_t const *srcend,
+			 const uint8_t **src, const uint8_t *srcend,
 			 uint32_t *codepoint0, uint32_t *state0)
 {
   uint16_t *d = dest + *destoff;
@@ -158,7 +162,7 @@ _hs_streaming_commons_decode_utf8_int(uint16_t *const dest, size_t *destoff,
 
     if (state == UTF8_ACCEPT) {
       while (s < srcend - 4) {
-	codepoint = *((uint32_t *) s);
+	codepoint = *((const uint32_t *) s);
 	if ((codepoint & 0x80808080) != 0)
 	  break;
 	s += 4;
@@ -202,8 +206,8 @@ _hs_streaming_commons_decode_utf8_int(uint16_t *const dest, size_t *destoff,
 
 uint8_t const *
 _hs_streaming_commons_decode_utf8_state(uint16_t *const dest, size_t *destoff,
-                           const uint8_t const **src,
-			   const uint8_t const *srcend,
+                           const uint8_t **src,
+			   const uint8_t *srcend,
                            uint32_t *codepoint0, uint32_t *state0)
 {
   uint8_t const *ret = _hs_streaming_commons_decode_utf8_int(dest, destoff, src, srcend,
@@ -243,7 +247,7 @@ _hs_streaming_commons_encode_utf8(uint8_t **destp, const uint16_t *src, size_t s
  ascii:
 #if defined(__x86_64__)
   while (srcend - src >= 4) {
-    uint64_t w = *((uint64_t *) src);
+    uint64_t w = *((const uint64_t *) src);
 
     if (w & 0xFF80FF80FF80FF80ULL) {
       if (!(w & 0x000000000000FF80ULL)) {
