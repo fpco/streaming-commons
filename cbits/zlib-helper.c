@@ -27,14 +27,14 @@ int streaming_commons_deflate_init2(z_stream *stream, int level, int methodBits,
 	return deflateInit2(stream, level, Z_DEFLATED, methodBits, memlevel, strategy);
 }
 
-int streaming_commons_inflate_set_dictionary(z_stream *stream, const char* dictionary, 
+int streaming_commons_inflate_set_dictionary(z_stream *stream, const char* dictionary,
                             unsigned int dictLength) {
-        return inflateSetDictionary(stream, dictionary, dictLength);
+        return inflateSetDictionary(stream, (const Bytef *)dictionary, dictLength);
 }
 
-int streaming_commons_deflate_set_dictionary(z_stream *stream, const char* dictionary, 
+int streaming_commons_deflate_set_dictionary(z_stream *stream, const char* dictionary,
                             unsigned int dictLength) {
-        return deflateSetDictionary(stream, dictionary, dictLength);
+        return deflateSetDictionary(stream, (const Bytef *)dictionary, dictLength);
 }
 
 void streaming_commons_free_z_stream_inflate (z_stream *stream)
@@ -45,13 +45,13 @@ void streaming_commons_free_z_stream_inflate (z_stream *stream)
 
 void streaming_commons_set_avail_in (z_stream *stream, char *buff, unsigned int avail)
 {
-	stream->next_in = buff;
+	stream->next_in = (Bytef *)buff;
 	stream->avail_in = avail;
 }
 
 void streaming_commons_set_avail_out (z_stream *stream, char *buff, unsigned int avail)
 {
-	stream->next_out = buff;
+	stream->next_out = (Bytef *)buff;
 	stream->avail_out = avail;
 }
 
@@ -72,7 +72,7 @@ unsigned int streaming_commons_get_avail_out (z_stream *stream)
 
 char* streaming_commons_get_next_in (z_stream *stream)
 {
-	return stream->next_in;
+	return (char *)stream->next_in;
 }
 
 void streaming_commons_free_z_stream_deflate (z_stream *stream)
