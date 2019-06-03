@@ -107,7 +107,7 @@ spec =
 
         builderSpec
 
-        prop "toByteStringIO idempotent to toLazyByteString" $ \bss' -> do
+        let prop_idempotent i bss' = do
             let bss = mconcat (map (B.byteString . S.pack) bss')
             ior <- newIORef []
             toByteStringIOWith 16
@@ -115,4 +115,13 @@ spec =
                                          modifyIORef ior (s' :))
                                bss
             chunks <- readIORef ior
-            L.fromChunks (reverse chunks) `shouldBe` B.toLazyByteString bss
+            let have = L.unpack (L.fromChunks (reverse chunks))
+                want = L.unpack (B.toLazyByteString bss)
+                diff = zipWith (-) want have
+            (i, diff) `shouldBe` (i, replicate (length diff) 0)
+
+        prop "toByteStringIO idempotent to toLazyByteString" (prop_idempotent (0::Int))
+
+        it "toByteStringIO idempotent to toLazyBytestring, specific case" $ do
+            let bss' = replicate 10 [0..255]
+            mapM_ (\i -> prop_idempotent i bss') [(1::Int)..100]
