@@ -7,7 +7,6 @@ module Data.Streaming.ByteString.BuilderSpec
 
 import qualified Data.ByteString as S
 import Data.ByteString.Char8 ()
-import qualified Data.ByteString.Unsafe as S
 import qualified Data.ByteString.Builder as B
 import Data.ByteString.Builder (Builder)
 import qualified Data.ByteString.Builder.Internal as B
@@ -107,12 +106,20 @@ spec =
 
         builderSpec
 
-        prop "toByteStringIO idempotent to toLazyByteString" $ \bss' -> do
+        let prop_idempotent i bss' = do
             let bss = mconcat (map (B.byteString . S.pack) bss')
             ior <- newIORef []
             toByteStringIOWith 16
-                               (\s -> do s' <- S.useAsCStringLen s S.unsafePackCStringLen
-                                         modifyIORef ior (s' :))
+                               (\s -> do let s' = S.copy s
+                                         s' `seq` modifyIORef ior (s' :))
                                bss
             chunks <- readIORef ior
-            L.fromChunks (reverse chunks) `shouldBe` B.toLazyByteString bss
+            let have = L.unpack (L.fromChunks (reverse chunks))
+                want = L.unpack (B.toLazyByteString bss)
+            (i, have) `shouldBe` (i, want)
+
+        prop "toByteStringIO idempotent to toLazyByteString" (prop_idempotent (0::Int))
+
+        it "toByteStringIO idempotent to toLazyBytestring, specific case" $ do
+            let bss' = replicate 10 [0..255]
+            mapM_ (\i -> prop_idempotent i bss') [(1::Int)..100]

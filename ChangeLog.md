@@ -1,3 +1,9 @@
+# ChangeLog for streaming-commons
+
+## 0.2.1.1
+
+* Fix a failing test case (invalid `ByteString` copying), does not affect library itself
+
 ## 0.2.1.0
 
 * Change `bindRandomPortGen` to use binding to port 0
