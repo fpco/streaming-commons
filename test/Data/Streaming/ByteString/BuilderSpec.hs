@@ -7,7 +7,6 @@ module Data.Streaming.ByteString.BuilderSpec
 
 import qualified Data.ByteString as S
 import Data.ByteString.Char8 ()
-import qualified Data.ByteString.Unsafe as S
 import qualified Data.ByteString.Builder as B
 import Data.ByteString.Builder (Builder)
 import qualified Data.ByteString.Builder.Internal as B
@@ -111,14 +110,13 @@ spec =
             let bss = mconcat (map (B.byteString . S.pack) bss')
             ior <- newIORef []
             toByteStringIOWith 16
-                               (\s -> do s' <- S.useAsCStringLen s S.unsafePackCStringLen
-                                         modifyIORef ior (s' :))
+                               (\s -> do let s' = S.copy s
+                                         s' `seq` modifyIORef ior (s' :))
                                bss
             chunks <- readIORef ior
             let have = L.unpack (L.fromChunks (reverse chunks))
                 want = L.unpack (B.toLazyByteString bss)
-                diff = zipWith (-) want have
-            (i, diff) `shouldBe` (i, replicate (length diff) 0)
+            (i, have) `shouldBe` (i, want)
 
         prop "toByteStringIO idempotent to toLazyByteString" (prop_idempotent (0::Int))
 
