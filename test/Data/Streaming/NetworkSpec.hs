@@ -14,6 +14,10 @@ import           Test.Hspec.QuickCheck
 
 spec :: Spec
 spec = do
+    describe "getDefaultReadBufferSize" $ do
+        it "sanity" $ do
+            getReadBufferSize (clientSettingsTCP 8080 "localhost") >= 4096 `shouldBe` True
+
     describe "getUnassignedPort" $ do
         it "sanity" $ replicateM_ 100000 $ do
             port <- getUnassignedPort

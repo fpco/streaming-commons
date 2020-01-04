@@ -94,7 +94,7 @@ module Data.Streaming.Network
 import qualified Network.Socket as NS
 import Data.Streaming.Network.Internal
 import Control.Concurrent (threadDelay)
-import Control.Exception (IOException, try, SomeException, throwIO, bracketOnError)
+import Control.Exception (IOException, try, SomeException, throwIO, bracketOnError, bracket)
 import Network.Socket (Socket, AddrInfo, SocketType)
 import Network.Socket.ByteString (recv, sendAll)
 import System.IO.Error (isDoesNotExistError)
@@ -108,7 +108,7 @@ import Control.Concurrent (forkIO)
 import Control.Monad (forever)
 import Data.IORef (IORef, newIORef, atomicModifyIORef)
 import Data.Array.Unboxed ((!), UArray, listArray)
-import System.IO.Unsafe (unsafePerformIO)
+import System.IO.Unsafe (unsafePerformIO, unsafeDupablePerformIO)
 import System.Random (randomRIO)
 import System.IO.Error (isFullErrorType, ioeGetErrorType)
 #if WINDOWS
@@ -263,8 +263,10 @@ bindPortUDP = bindPortGen NS.Datagram
 bindRandomPortUDP :: HostPreference -> IO (Int, Socket)
 bindRandomPortUDP = bindRandomPortGen NS.Datagram
 
+{-# NOINLINE defaultReadBufferSize #-}
 defaultReadBufferSize :: Int
-defaultReadBufferSize = 32768
+defaultReadBufferSize = unsafeDupablePerformIO $
+  bracket (NS.socket NS.AF_INET NS.Stream 0) NS.close (\sock -> NS.getSocketOption sock NS.RecvBuffer)
 
 #if !WINDOWS
 -- | Attempt to connect to the given Unix domain socket path.
