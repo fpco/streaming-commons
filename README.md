@@ -4,8 +4,7 @@ streaming-commons
 Common lower-level functions needed by various streaming data libraries.
 Intended to be shared by libraries like conduit and pipes.
 
-[![Build Status](https://travis-ci.org/fpco/streaming-commons.svg)](https://travis-ci.org/fpco/streaming-commons)
-[![Build status](https://ci.appveyor.com/api/projects/status/gn0gn4po97su2iyk/branch/master?svg=true)](https://ci.appveyor.com/project/snoyberg/streaming-commons/branch/master)
+[![Build Status](https://dev.azure.com/fpco/streaming-commons/_apis/build/status/fpco.streaming-commons?branchName=master)](https://dev.azure.com/fpco/streaming-commons/_build/latest?definitionId=2&branchName=master)
 
 Dependencies
 ------------
