@@ -79,6 +79,9 @@ data Inherited = Inherited
 
 -- | Close the stream with the child process.
 --
+-- You usually do not want to use this, as it will leave the corresponding file
+-- descriptor unassigned and hence available for re-use in the child process.
+--
 -- Since 0.1.4
 data ClosedStream = ClosedStream
 
