@@ -120,8 +120,7 @@ getPossibleAddrs sockettype host' port' af =
     NS.getAddrInfo (Just hints) (Just host') (Just $ show port')
   where
     hints = NS.defaultHints {
-                NS.addrFlags = [NS.AI_ADDRCONFIG]
-              , NS.addrSocketType = sockettype
+                NS.addrSocketType = sockettype
               , NS.addrFamily = af
               }
 
@@ -157,9 +156,7 @@ bindPortGen sockettype = bindPortGenEx (defaultSocketOptions sockettype) sockett
 bindPortGenEx :: [(NS.SocketOption, Int)] -> SocketType -> Int -> HostPreference -> IO Socket
 bindPortGenEx sockOpts sockettype p s = do
     let hints = NS.defaultHints
-            { NS.addrFlags = [ NS.AI_PASSIVE
-                             , NS.AI_ADDRCONFIG
-                             ]
+            { NS.addrFlags = [NS.AI_PASSIVE]
             , NS.addrSocketType = sockettype
             }
         host =

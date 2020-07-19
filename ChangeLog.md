@@ -1,5 +1,9 @@
 # ChangeLog for streaming-commons
 
+## 0.2.2.0
+
+* Remove `AI_ADDRCONFIG` [#58](https://github.com/fpco/streaming-commons/issues/58)
+
 ## 0.2.1.2
 
 * Update `defaultReadBufferSize` to use system default instead of hardcoded value [#54](https://github.com/fpco/streaming-commons/issues/54)
