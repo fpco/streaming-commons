@@ -1,5 +1,9 @@
 # ChangeLog for streaming-commons
 
+## 0.2.2.1
+
+* Fix test suite compilation issue [stackage#5528](https://github.com/commercialhaskell/stackage/issues/5528)
+
 ## 0.2.2.0
 
 * Remove `AI_ADDRCONFIG` [#58](https://github.com/fpco/streaming-commons/issues/58)
