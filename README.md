@@ -4,7 +4,7 @@ streaming-commons
 Common lower-level functions needed by various streaming data libraries.
 Intended to be shared by libraries like conduit and pipes.
 
-[![Build Status](https://dev.azure.com/fpco/streaming-commons/_apis/build/status/fpco.streaming-commons?branchName=master)](https://dev.azure.com/fpco/streaming-commons/_build/latest?definitionId=2&branchName=master)
+[![Build status](https://github.com/fpco/streaming-commons/actions/workflows/tests.yml/badge.svg)](https://github.com/fpco/streaming-commons/actions/workflows/tests.yml)
 
 Dependencies
 ------------
