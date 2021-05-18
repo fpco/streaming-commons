@@ -46,7 +46,7 @@ library
                        Data.Text.Internal.Encoding.Utf16
                        Data.Text.Internal.Encoding.Utf32
 
-  build-depends:       base >= 4.9 && < 5
+  build-depends:       base >= 4.12 && < 5
                      , array
                      , async
                      , bytestring
