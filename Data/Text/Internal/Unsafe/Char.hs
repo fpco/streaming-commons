@@ -32,24 +32,28 @@ import Control.Exception (assert)
 import Control.Monad.ST (ST)
 import Data.Bits ((.&.))
 import Data.Text.Internal.Unsafe.Shift (shiftR)
-import GHC.Exts (Char(..), Int(..), chr#, ord#, word2Int#)
+import GHC.Exts (Char(..), Int(..), Word#, chr#, ord#, word2Int#)
 import GHC.Word (Word8(..), Word16(..), Word32(..))
 import qualified Data.Text.Array as A
+
+#if MIN_VERSION_base(4,16,0)
+import GHC.Exts (Word8#, Word16#, Word32#, word8ToWord#, word16ToWord#, word32ToWord#)
+#endif
 
 ord :: Char -> Int
 ord (C# c#) = I# (ord# c#)
 {-# INLINE ord #-}
 
 unsafeChr :: Word16 -> Char
-unsafeChr (W16# w#) = C# (chr# (word2Int# w#))
+unsafeChr (W16# w#) = C# (chr# (word2Int# (word16ToWordCompat# w#)))
 {-# INLINE unsafeChr #-}
 
 unsafeChr8 :: Word8 -> Char
-unsafeChr8 (W8# w#) = C# (chr# (word2Int# w#))
+unsafeChr8 (W8# w#) = C# (chr# (word2Int# (word8ToWordCompat# w#)))
 {-# INLINE unsafeChr8 #-}
 
 unsafeChr32 :: Word32 -> Char
-unsafeChr32 (W32# w#) = C# (chr# (word2Int# w#))
+unsafeChr32 (W32# w#) = C# (chr# (word2Int# (word32ToWordCompat# w#)))
 {-# INLINE unsafeChr32 #-}
 
 -- | Write a character into the array at the given offset.  Returns
@@ -93,3 +97,23 @@ unsafeWriteRev marr i c
           hi = fromIntegral $ (m .&. 0x3FF) + 0xDC00
 {-# INLINE unsafeWriteRev #-}
 -}
+
+#if MIN_VERSION_base(4,16,0)
+word8ToWordCompat# :: Word8# -> Word#
+word8ToWordCompat# = word8ToWord#
+
+word16ToWordCompat# :: Word16# -> Word#
+word16ToWordCompat# = word16ToWord#
+
+word32ToWordCompat# :: Word32# -> Word#
+word32ToWordCompat# = word32ToWord#
+#else
+word8ToWordCompat# :: Word# -> Word#
+word8ToWordCompat# x = x
+
+word16ToWordCompat# :: Word# -> Word#
+word16ToWordCompat# x = x
+
+word32ToWordCompat# :: Word# -> Word#
+word32ToWordCompat# x = x
+#endif

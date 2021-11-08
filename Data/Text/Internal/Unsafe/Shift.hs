@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE MagicHash #-}
 
 -- |
@@ -22,6 +23,9 @@ module Data.Text.Internal.Unsafe.Shift
 
 -- import qualified Data.Bits as Bits
 import GHC.Base
+#if __GLASGOW_HASKELL__ >= 903
+  hiding (uncheckedShiftL64#, uncheckedShiftRL64#)
+#endif
 import GHC.Word
 
 -- | This is a workaround for poor optimisation in GHC 6.8.2.  It
@@ -36,17 +40,17 @@ class UnsafeShift a where
 
 instance UnsafeShift Word16 where
     {-# INLINE shiftL #-}
-    shiftL (W16# x#) (I# i#) = W16# (narrow16Word# (x# `uncheckedShiftL#` i#))
+    shiftL (W16# x#) (I# i#) = W16# (narrow16WordCompat# (word16ToWordCompat# x# `uncheckedShiftL#` i#))
 
     {-# INLINE shiftR #-}
-    shiftR (W16# x#) (I# i#) = W16# (x# `uncheckedShiftRL#` i#)
+    shiftR (W16# x#) (I# i#) = W16# (wordToWord16Compat# (word16ToWordCompat# x# `uncheckedShiftRL#` i#))
 
 instance UnsafeShift Word32 where
     {-# INLINE shiftL #-}
-    shiftL (W32# x#) (I# i#) = W32# (narrow32Word# (x# `uncheckedShiftL#` i#))
+    shiftL (W32# x#) (I# i#) = W32# (narrow32WordCompat# (word32ToWordCompat# x# `uncheckedShiftL#` i#))
 
     {-# INLINE shiftR #-}
-    shiftR (W32# x#) (I# i#) = W32# (x# `uncheckedShiftRL#` i#)
+    shiftR (W32# x#) (I# i#) = W32# (wordToWord32Compat# (word32ToWordCompat# x# `uncheckedShiftRL#` i#))
 
 instance UnsafeShift Word64 where
     {-# INLINE shiftL #-}
@@ -70,3 +74,43 @@ instance UnsafeShift Integer where
     {-# INLINE shiftR #-}
     shiftR = Bits.shiftR
 -}
+
+#if MIN_VERSION_base(4,16,0)
+word16ToWordCompat# :: Word16# -> Word#
+word16ToWordCompat# = word16ToWord#
+
+word32ToWordCompat# :: Word32# -> Word#
+word32ToWordCompat# = word32ToWord#
+
+wordToWord16Compat# :: Word# -> Word16#
+wordToWord16Compat# = wordToWord16#
+
+wordToWord32Compat# :: Word# -> Word32#
+wordToWord32Compat# = wordToWord32#
+
+narrow16WordCompat# :: Word# -> Word16#
+narrow16WordCompat# = wordToWord16#
+
+narrow32WordCompat# :: Word# -> Word32#
+narrow32WordCompat# = wordToWord32#
+#else
+-- No-ops
+word16ToWordCompat# :: Word# -> Word#
+word16ToWordCompat# x = x
+
+word32ToWordCompat# :: Word# -> Word#
+word32ToWordCompat# x = x
+
+wordToWord16Compat# :: Word# -> Word#
+wordToWord16Compat# x = x
+
+wordToWord32Compat# :: Word# -> Word#
+wordToWord32Compat# x = x
+
+-- Actual narrowing
+narrow16WordCompat# :: Word# -> Word#
+narrow16WordCompat# = narrow16Word#
+
+narrow32WordCompat# :: Word# -> Word#
+narrow32WordCompat# = narrow32Word#
+#endif

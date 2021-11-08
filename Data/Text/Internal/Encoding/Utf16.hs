@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE MagicHash, BangPatterns #-}
 
 -- |
@@ -29,8 +30,8 @@ import GHC.Word (Word16(..))
 chr2 :: Word16 -> Word16 -> Char
 chr2 (W16# a#) (W16# b#) = C# (chr# (upper# +# lower# +# 0x10000#))
     where
-      !x# = word2Int# a#
-      !y# = word2Int# b#
+      !x# = word2Int# (word16ToWordCompat# a#)
+      !y# = word2Int# (word16ToWordCompat# b#)
       !upper# = uncheckedIShiftL# (x# -# 0xD800#) 10#
       !lower# = y# -# 0xDC00#
 {-# INLINE chr2 #-}
@@ -43,3 +44,11 @@ validate2       ::  Word16 -> Word16 -> Bool
 validate2 x1 x2 = x1 >= 0xD800 && x1 <= 0xDBFF &&
                   x2 >= 0xDC00 && x2 <= 0xDFFF
 {-# INLINE validate2 #-}
+
+#if MIN_VERSION_base(4,16,0)
+word16ToWordCompat# :: Word16# -> Word#
+word16ToWordCompat# = word16ToWord#
+#else
+word16ToWordCompat# :: Word# -> Word#
+word16ToWordCompat# x = x
+#endif
