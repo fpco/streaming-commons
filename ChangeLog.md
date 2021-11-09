@@ -1,5 +1,9 @@
 # ChangeLog for streaming-commons
 
+## 0.2.2.2
+
+* Support GHC 9.2 [#62](https://github.com/fpco/streaming-commons/pull/62)
+
 ## 0.2.2.1
 
 * Fix test suite compilation issue [stackage#5528](https://github.com/commercialhaskell/stackage/issues/5528)
