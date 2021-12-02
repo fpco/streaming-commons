@@ -4,6 +4,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MagicHash                  #-}
 {-# LANGUAGE Rank2Types                 #-}
+{-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE UnliftedFFITypes           #-}
 
 --
@@ -48,7 +49,7 @@ module Data.Streaming.Text
 
 import           Control.Monad.ST                  (ST, runST)
 import           Control.Monad.ST.Unsafe           (unsafeIOToST, unsafeSTToIO)
-import           Data.Bits                         ((.|.))
+import           Data.Bits                         ((.|.), shiftL)
 import qualified Data.ByteString                   as B
 import           Data.ByteString.Internal          (ByteString (PS))
 import qualified Data.ByteString.Unsafe            as B
@@ -59,10 +60,8 @@ import           Data.Text.Internal                (text)
 import qualified Data.Text.Internal.Encoding.Utf16 as U16
 import qualified Data.Text.Internal.Encoding.Utf32 as U32
 import qualified Data.Text.Internal.Encoding.Utf8  as U8
-import           Data.Text.Internal.Unsafe.Char    (unsafeChr, unsafeChr32,
+import           Data.Text.Internal.Unsafe.Char    (unsafeWrite, unsafeChr32,
                                                     unsafeChr8)
-import           Data.Text.Internal.Unsafe.Char    (unsafeWrite)
-import           Data.Text.Internal.Unsafe.Shift   (shiftL)
 import           Data.Word                         (Word32, Word8)
 import           Foreign.C.Types                   (CSize (..))
 import           Foreign.ForeignPtr                (withForeignPtr)
@@ -71,6 +70,17 @@ import           Foreign.Ptr                       (Ptr, minusPtr, nullPtr,
                                                     plusPtr)
 import           Foreign.Storable                  (Storable, peek, poke)
 import           GHC.Base                          (MutableByteArray#)
+
+#if MIN_VERSION_text(2,0,0)
+import           Control.Exception                 (try, evaluate)
+import qualified Data.Text.Encoding                as TE
+import qualified Data.Text.Encoding.Error          as TE
+import           Data.Text.Internal.Unsafe.Char    (unsafeChr16)
+import           System.IO.Unsafe                  (unsafePerformIO)
+#else
+import           Data.Text.Internal.Unsafe.Char    (unsafeChr)
+unsafeChr16 = unsafeChr
+#endif
 
 data S = S0
        | S1 {-# UNPACK #-} !Word8
@@ -108,6 +118,16 @@ newtype DecoderState = DecoderState Word32 deriving (Eq, Show, Num, Storable)
 -- | /O(n)/ Convert a 'ByteString' into a 'Stream Char', using
 -- UTF-8 encoding.
 decodeUtf8 :: B.ByteString -> DecodeResult
+#if MIN_VERSION_text(2,0,0)
+decodeUtf8 = go mempty TE.streamDecodeUtf8
+  where
+    go :: B.ByteString -> (B.ByteString -> TE.Decoding) -> B.ByteString -> DecodeResult
+    go prev decoder curr = case unsafePerformIO (try (evaluate (decoder curr))) of
+      -- Caught exception does not allow to reconstruct 'DecodeResultFailure',
+      -- so delegating this to 'decodeUtf8Pure'
+      Left (_ :: TE.UnicodeException) -> decodeUtf8Pure (prev <> curr)
+      Right (TE.Some decoded undecoded cont) -> DecodeResultSuccess decoded (go undecoded cont)
+#else
 decodeUtf8 = decodeChunk B.empty 0 0
  where
   decodeChunkCheck :: B.ByteString -> CodePoint -> DecoderState -> B.ByteString -> DecodeResult
@@ -158,6 +178,7 @@ decodeUtf8 = decodeChunk B.empty 0 0
                   return $! DecodeResultSuccess chunkText
                          $! decodeChunkCheck unused codepoint state
         in loop (ptr `plusPtr` off)
+#endif
 
 -- | /O(n)/ Convert a 'ByteString' into a 'Stream Char', using
 -- UTF-8 encoding.
@@ -172,7 +193,13 @@ decodeUtf8Pure =
             _  -> DecodeResultFailure T.empty $ toBS s
     beginChunk s0 ps = runST $ do
         let initLen = B.length ps
+#if MIN_VERSION_text(2,0,0)
+        -- Worst-case scenario: the very first byte finishes a 4-byte sequence,
+        -- so decoding results in 4 + (initLen - 1) bytes.
+        marr <- A.new (initLen + 3)
+#else
         marr <- A.new (initLen + 1)
+#endif
         let start !i !j
                 | i >= len = do
                     t <- getText j marr
@@ -237,12 +264,18 @@ decodeUtf16LE =
             _  -> DecodeResultFailure T.empty $ toBS s
     beginChunk s0 ps = runST $ do
         let initLen = B.length ps
-        marr <- A.new (initLen + 1)
+#if MIN_VERSION_text(2,0,0)
+        -- Worst-case scenario: each Word16 in UTF16 gives three Word8 in UTF8
+        -- and left-over from a previous chunk gives four Word8 in UTF8
+        marr <- A.new ((initLen `div` 2) * 3 + 4) -- of Word8
+#else
+        marr <- A.new (initLen + 1) -- of Word16
+#endif
         let start !i !j
                 | i >= len = do
                     t <- getText j marr
                     return $! DecodeResultSuccess t (beginChunk S0)
-                | i + 1 < len && U16.validate1 x1    = addChar' 2 (unsafeChr x1)
+                | i + 1 < len && U16.validate1 x1    = addChar' 2 (unsafeChr16 x1)
                 | i + 3 < len && U16.validate2 x1 x2 = addChar' 4 (U16.chr2 x1 x2)
                 | i + 3 < len = do
                     t <- getText j marr
@@ -271,7 +304,7 @@ decodeUtf16LE =
                     S1 a ->
                         let x1 = combine a x
                          in if U16.validate1 x1
-                                then addChar' (unsafeChr x1)
+                                then addChar' (unsafeChr16 x1)
                                 else checkCont (S2 a x) (i + 1)
                     S2 a b -> checkCont (S3 a b x) (i + 1)
                     S3 a b c ->
@@ -306,12 +339,18 @@ decodeUtf16BE =
             _  -> DecodeResultFailure T.empty $ toBS s
     beginChunk s0 ps = runST $ do
         let initLen = B.length ps
-        marr <- A.new (initLen + 1)
+#if MIN_VERSION_text(2,0,0)
+        -- Worst-case scenario: each Word16 in UTF16 gives three Word8 in UTF8
+        -- and left-over from a previous chunk gives four Word8 in UTF8
+        marr <- A.new ((initLen `div` 2) * 3 + 4) -- of Word8
+#else
+        marr <- A.new (initLen + 1) -- of Word16
+#endif
         let start !i !j
                 | i >= len = do
                     t <- getText j marr
                     return $! DecodeResultSuccess t (beginChunk S0)
-                | i + 1 < len && U16.validate1 x1    = addChar' 2 (unsafeChr x1)
+                | i + 1 < len && U16.validate1 x1    = addChar' 2 (unsafeChr16 x1)
                 | i + 3 < len && U16.validate2 x1 x2 = addChar' 4 (U16.chr2 x1 x2)
                 | i + 3 < len = do
                     t <- getText j marr
@@ -340,7 +379,7 @@ decodeUtf16BE =
                     S1 a ->
                         let x1 = combine a x
                          in if U16.validate1 x1
-                                then addChar' (unsafeChr x1)
+                                then addChar' (unsafeChr16 x1)
                                 else checkCont (S2 a x) (i + 1)
                     S2 a b -> checkCont (S3 a b x) (i + 1)
                     S3 a b c ->
@@ -375,7 +414,14 @@ decodeUtf32LE =
             _  -> DecodeResultFailure T.empty $ toBS s
     beginChunk s0 ps = runST $ do
         let initLen = B.length ps `div` 2
-        marr <- A.new (initLen + 1)
+#if MIN_VERSION_text(2,0,0)
+        -- | Worst-case scenario: the very first byte finishes a 4-byte UTF8 sequence,
+        -- and other codepoints have 4-byte UTF8 representation as well.
+        -- This gives 4 + (B.length ps - 1), or (for odd B.length) initLen * 2 + 4.
+        marr <- A.new (initLen * 2 + 4) -- of Word8
+#else
+        marr <- A.new (initLen + 1) -- of Word16
+#endif
         let start !i !j
                 | i >= len = do
                     t <- getText j marr
@@ -441,7 +487,14 @@ decodeUtf32BE =
             _  -> DecodeResultFailure T.empty $ toBS s
     beginChunk s0 ps = runST $ do
         let initLen = B.length ps `div` 2
-        marr <- A.new (initLen + 1)
+#if MIN_VERSION_text(2,0,0)
+        -- | Worst-case scenario: the very first byte finishes a 4-byte UTF8 sequence,
+        -- and other codepoints have 4-byte UTF8 representation as well.
+        -- This gives 4 + (B.length ps - 1), or (for odd B.length) initLen * 2 + 4.
+        marr <- A.new (initLen * 2 + 4) -- of Word8
+#else
+        marr <- A.new (initLen + 1) -- of Word16
+#endif
         let start !i !j
                 | i >= len = do
                     t <- getText j marr
