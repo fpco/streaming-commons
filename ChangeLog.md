@@ -1,5 +1,9 @@
 # ChangeLog for streaming-commons
 
+## 0.2.2.3
+
+* Support text 2.0 [#65](https://github.com/fpco/streaming-commons/pull/65)
+
 ## 0.2.2.2
 
 * Support GHC 9.2 [#62](https://github.com/fpco/streaming-commons/pull/62)
