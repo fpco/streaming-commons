@@ -415,7 +415,7 @@ decodeUtf32LE =
     beginChunk s0 ps = runST $ do
         let initLen = B.length ps `div` 2
 #if MIN_VERSION_text(2,0,0)
-        -- | Worst-case scenario: the very first byte finishes a 4-byte UTF8 sequence,
+        -- Worst-case scenario: the very first byte finishes a 4-byte UTF8 sequence,
         -- and other codepoints have 4-byte UTF8 representation as well.
         -- This gives 4 + (B.length ps - 1), or (for odd B.length) initLen * 2 + 4.
         marr <- A.new (initLen * 2 + 4) -- of Word8
@@ -488,7 +488,7 @@ decodeUtf32BE =
     beginChunk s0 ps = runST $ do
         let initLen = B.length ps `div` 2
 #if MIN_VERSION_text(2,0,0)
-        -- | Worst-case scenario: the very first byte finishes a 4-byte UTF8 sequence,
+        -- Worst-case scenario: the very first byte finishes a 4-byte UTF8 sequence,
         -- and other codepoints have 4-byte UTF8 representation as well.
         -- This gives 4 + (B.length ps - 1), or (for odd B.length) initLen * 2 + 4.
         marr <- A.new (initLen * 2 + 4) -- of Word8
