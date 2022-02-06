@@ -1,5 +1,9 @@
 # ChangeLog for streaming-commons
 
+## 0.2.2.4
+
+* Fix docstrings for text 2.0
+
 ## 0.2.2.3
 
 * Support text 2.0 [#65](https://github.com/fpco/streaming-commons/pull/65)
