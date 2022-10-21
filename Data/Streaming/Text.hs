@@ -126,7 +126,11 @@ decodeUtf8 = go mempty TE.streamDecodeUtf8
       -- Caught exception does not allow to reconstruct 'DecodeResultFailure',
       -- so delegating this to 'decodeUtf8Pure'
       Left (_ :: TE.UnicodeException) -> decodeUtf8Pure (prev <> curr)
-      Right (TE.Some decoded undecoded cont) -> DecodeResultSuccess decoded (go undecoded cont)
+      Right (TE.Some decoded undecoded cont)
+          -- An empty bytestring indicates end-of-input, if we still have undecoded bytes that
+          -- becomes a failure.
+          | B.null curr && not (B.null undecoded) -> DecodeResultFailure decoded undecoded
+          | otherwise -> DecodeResultSuccess decoded (go undecoded cont)
 #else
 decodeUtf8 = decodeChunk B.empty 0 0
  where

@@ -8,3 +8,4 @@ cabal-dev
 *.swp
 .stack-work/
 tarballs/
+dist-newstyle/

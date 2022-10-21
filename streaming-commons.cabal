@@ -94,6 +94,8 @@ test-suite test
                   , network >= 2.4.0.0
                   , text
                   , zlib
+    build-tool-depends:
+        hspec-discover:hspec-discover
 
   if flag(use-bytestring-builder)
     build-depends:     bytestring < 0.10.2.0
