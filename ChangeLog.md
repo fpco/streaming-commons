@@ -1,5 +1,9 @@
 # ChangeLog for streaming-commons
 
+## 0.2.2.5
+
+* UTF-8 Decoder fails on trailing bytes [#71](https://github.com/fpco/streaming-commons/pull/71)
+
 ## 0.2.2.4
 
 * Fix docstrings for text 2.0
