@@ -1,5 +1,9 @@
 # ChangeLog for streaming-commons
 
+## 0.2.2.5
+
+* Remove the zlib headers [#72](https://github.com/fpco/streaming-commons/issues/72)
+
 ## 0.2.2.4
 
 * Fix docstrings for text 2.0
