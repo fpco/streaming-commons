@@ -1,6 +1,6 @@
 # ChangeLog for streaming-commons
 
-## 0.2.2.5
+## 0.2.2.6
 
 * Remove the zlib headers [#72](https://github.com/fpco/streaming-commons/issues/72)
 
