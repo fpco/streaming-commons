@@ -1,5 +1,6 @@
 {-# LANGUAGE CPP                 #-}
 {-# LANGUAGE DeriveDataTypeable  #-}
+{-# LANGUAGE QuasiQuotes         #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 -- | Streaming functions for interacting with the filesystem.
@@ -14,8 +15,7 @@ module Data.Streaming.Filesystem.OsPath
   ) where
 
 import Data.Typeable (Typeable)
-
-import System.Directory.Internal (os)
+import System.OsPath (osp)
 
 #if WINDOWS
 
@@ -32,7 +32,7 @@ data DirStream = DirStream !Win32.HANDLE !Win32.FindData !(IORef Bool)
 
 openDirStream :: OsPath -> IO DirStream
 openDirStream fp = do
-    (h, fdat) <- Win32.findFirstFile $ getOsString $ fp </> os "*"
+    (h, fdat) <- Win32.findFirstFile $ getOsString $ fp </> [osp|*|]
     imore <- newIORef True -- always at least two records, "." and ".."
     return $! DirStream h fdat imore
 
@@ -46,7 +46,7 @@ readDirStream ds@(DirStream h fdat imore) = do
         then do
             filename <- Win32.getFindDataFileName fdat
             Win32.findNextFile h fdat >>= writeIORef imore
-            if filename == getOsString (os ".") || filename == getOsString (os "..")
+            if filename == getOsString [osp|.|] || filename == getOsString [osp|..|]
                 then readDirStream ds
                 else return $ Just $ OsString filename
         else return Nothing
@@ -68,9 +68,12 @@ getFileType fp = do
 import Control.Exception (try, IOException)
 import System.OsPath.Types (OsPath)
 import System.OsString.Internal.Types (OsString(OsString), getOsString)
-import System.Posix.Directory.PosixPath (DirStream, openDirStream, closeDirStream)
+import System.Posix.Directory.PosixPath (DirStream, closeDirStream)
 import qualified System.Posix.Directory.PosixPath as Posix
 import qualified System.Posix.Files.PosixString as PosixF
+
+openDirStream :: OsPath -> IO DirStream
+openDirStream = Posix.openDirStream . getOsString
 
 readDirStream :: DirStream -> IO (Maybe OsPath)
 readDirStream ds = loop
@@ -80,7 +83,7 @@ readDirStream ds = loop
         if fp == mempty
         then return Nothing
         else
-            if fp == getOsString (os ".") || fp == getOsString (os "..")
+            if fp == getOsString [osp|.|] || fp == getOsString [osp|..|]
             then loop
             else return $ Just $ OsString fp
 
