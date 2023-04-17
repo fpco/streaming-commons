@@ -79,6 +79,7 @@ test-suite test
     other-modules:  Data.Streaming.ByteString.BuilderSpec
                     Data.Streaming.FileReadSpec
                     Data.Streaming.FilesystemSpec
+                    Data.Streaming.Filesystem.OsPathSpec
                     Data.Streaming.NetworkSpec
                     Data.Streaming.ProcessSpec
                     Data.Streaming.TextSpec
@@ -92,6 +93,7 @@ test-suite test
                   , async
                   , bytestring
                   , deepseq
+                  , filepath >= 1.4.100
                   , network >= 2.4.0.0
                   , text
                   , zlib
