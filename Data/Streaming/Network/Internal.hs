@@ -5,11 +5,9 @@ module Data.Streaming.Network.Internal
     , HostPreference (..)
     , Message (..)
     , AppData (..)
-#if !WINDOWS
     , ServerSettingsUnix (..)
     , ClientSettingsUnix (..)
     , AppDataUnix (..)
-#endif
     ) where
 
 import Data.String (IsString (..))
@@ -73,7 +71,6 @@ instance IsString HostPreference where
     fromString "!6" = HostIPv6Only
     fromString s = Host s
 
-#if !WINDOWS
 -- | Settings for a Unix domain sockets server.
 data ServerSettingsUnix = ServerSettingsUnix
     { serverPath :: !FilePath
@@ -92,7 +89,6 @@ data AppDataUnix = AppDataUnix
     { appReadUnix :: !(IO ByteString)
     , appWriteUnix :: !(ByteString -> IO ())
     }
-#endif
 
 -- | Representation of a single UDP message
 data Message = Message { msgData :: {-# UNPACK #-} !ByteString
