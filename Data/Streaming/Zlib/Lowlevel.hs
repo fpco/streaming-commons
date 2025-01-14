@@ -23,6 +23,7 @@ module Data.Streaming.Zlib.Lowlevel
     , c_call_inflate_set_dictionary
     ) where
 
+import Data.Functor (void)
 import Foreign.C
 import Foreign.Ptr
 import Codec.Compression.Zlib (WindowBits (WindowBits))
@@ -43,19 +44,19 @@ foreign import ccall unsafe "streaming_commons_create_z_stream"
 
 foreign import ccall unsafe "streaming_commons_deflate_init2"
     c_deflateInit2 :: ZStream' -> CInt -> CInt -> CInt -> CInt
-                   -> IO ()
+                   -> IO CInt
 
 deflateInit2 :: ZStream' -> Int -> WindowBits -> Int -> Strategy -> IO ()
-deflateInit2 zstream level windowBits memlevel strategy =
+deflateInit2 zstream level windowBits memlevel strategy = void $
     c_deflateInit2 zstream (fromIntegral level) (wbToInt windowBits)
                    (fromIntegral memlevel)
                    (fromIntegral $ fromEnum strategy)
 
 foreign import ccall unsafe "streaming_commons_inflate_init2"
-    c_inflateInit2 :: ZStream' -> CInt -> IO ()
+    c_inflateInit2 :: ZStream' -> CInt -> IO CInt
 
 inflateInit2 :: ZStream' -> WindowBits -> IO ()
-inflateInit2 zstream wb = c_inflateInit2 zstream (wbToInt wb)
+inflateInit2 zstream wb = void $ c_inflateInit2 zstream (wbToInt wb)
 
 foreign import ccall unsafe "&streaming_commons_free_z_stream_inflate"
     c_free_z_stream_inflate :: FunPtr (ZStream' -> IO ())
@@ -94,10 +95,10 @@ foreign import ccall unsafe "streaming_commons_call_deflate_full_flush"
     c_call_deflate_full_flush :: ZStream' -> IO CInt
 
 foreign import ccall unsafe "streaming_commons_deflate_set_dictionary"
-    c_call_deflate_set_dictionary :: ZStream' -> Ptr CChar -> CUInt -> IO ()
+    c_call_deflate_set_dictionary :: ZStream' -> Ptr CChar -> CUInt -> IO CInt
 
 foreign import ccall unsafe "streaming_commons_inflate_set_dictionary"
-    c_call_inflate_set_dictionary :: ZStream' -> Ptr CChar -> CUInt -> IO ()
+    c_call_inflate_set_dictionary :: ZStream' -> Ptr CChar -> CUInt -> IO CInt
 
 wbToInt :: WindowBits -> CInt
 wbToInt (WindowBits i) = fromIntegral i
