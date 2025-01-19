@@ -8,30 +8,24 @@ module Data.Streaming.Network
     , HostPreference
     , Message (..)
     , AppData
-#if !WINDOWS
     , ServerSettingsUnix
     , ClientSettingsUnix
     , AppDataUnix
-#endif
       -- ** Smart constructors
     , serverSettingsTCP
     , serverSettingsTCPSocket
     , clientSettingsTCP
     , serverSettingsUDP
     , clientSettingsUDP
-#if !WINDOWS
     , serverSettingsUnix
     , clientSettingsUnix
-#endif
     , message
       -- ** Classes
     , HasPort (..)
     , HasAfterBind (..)
     , HasReadWrite (..)
     , HasReadBufferSize (..)
-#if !WINDOWS
     , HasPath (..)
-#endif
       -- ** Setters
     , setPort
     , setHost
@@ -39,9 +33,7 @@ module Data.Streaming.Network
     , setAfterBind
     , setNeedLocalAddr
     , setReadBufferSize
-#if !WINDOWS
     , setPath
-#endif
       -- ** Getters
     , getPort
     , getHost
@@ -49,9 +41,7 @@ module Data.Streaming.Network
     , getAfterBind
     , getNeedLocalAddr
     , getReadBufferSize
-#if !WINDOWS
     , getPath
-#endif
     , appRead
     , appWrite
     , appSockAddr
@@ -82,13 +72,11 @@ module Data.Streaming.Network
     , bindPortUDP
     , bindRandomPortUDP
     , getSocketUDP
-#if !WINDOWS
       -- ** Unix
     , bindPath
     , getSocketUnix
     , runUnixServer
     , runUnixClient
-#endif
     ) where
 
 import qualified Network.Socket as NS
@@ -265,7 +253,6 @@ defaultReadBufferSize :: Int
 defaultReadBufferSize = unsafeDupablePerformIO $
   bracket (NS.socket NS.AF_INET NS.Stream 0) NS.close (\sock -> NS.getSocketOption sock NS.RecvBuffer)
 
-#if !WINDOWS
 -- | Attempt to connect to the given Unix domain socket path.
 getSocketUnix :: FilePath -> IO Socket
 getSocketUnix path = do
@@ -317,7 +304,6 @@ clientSettingsUnix path = ClientSettingsUnix
     { clientPath = path
     , clientReadBufferSizeUnix = defaultReadBufferSize
     }
-#endif
 
 #if defined(__GLASGOW_HASKELL__) && WINDOWS
 -- Socket recv and accept calls on Windows platform cannot be interrupted when compiled with -threaded.
@@ -495,7 +481,6 @@ setAddrFamily af cs = cs { clientAddrFamily = af }
 getAddrFamily :: ClientSettings -> NS.Family
 getAddrFamily = clientAddrFamily
 
-#if !WINDOWS
 class HasPath a where
     pathLens :: Functor f => (FilePath -> f FilePath) -> a -> f a
 instance HasPath ServerSettingsUnix where
@@ -508,7 +493,6 @@ getPath = getConstant . pathLens Constant
 
 setPath :: HasPath a => FilePath -> a -> a
 setPath p = runIdentity . pathLens (const (Identity p))
-#endif
 
 setNeedLocalAddr :: Bool -> ServerSettings -> ServerSettings
 setNeedLocalAddr x y = y { serverNeedLocalAddr = x }
@@ -520,10 +504,8 @@ class HasAfterBind a where
     afterBindLens :: Functor f => ((Socket -> IO ()) -> f (Socket -> IO ())) -> a -> f a
 instance HasAfterBind ServerSettings where
     afterBindLens f ss = fmap (\p -> ss { serverAfterBind = p }) (f (serverAfterBind ss))
-#if !WINDOWS
 instance HasAfterBind ServerSettingsUnix where
     afterBindLens f ss = fmap (\p -> ss { serverAfterBindUnix = p }) (f (serverAfterBindUnix ss))
-#endif
 
 getAfterBind :: HasAfterBind a => a -> (Socket -> IO ())
 getAfterBind = getConstant . afterBindLens Constant
@@ -540,14 +522,12 @@ instance HasReadBufferSize ServerSettings where
 -- | Since 0.1.13
 instance HasReadBufferSize ClientSettings where
     readBufferSizeLens f cs = fmap (\p -> cs { clientReadBufferSize = p }) (f (clientReadBufferSize cs))
-#if !WINDOWS
 -- | Since 0.1.13
 instance HasReadBufferSize ServerSettingsUnix where
     readBufferSizeLens f ss = fmap (\p -> ss { serverReadBufferSizeUnix = p }) (f (serverReadBufferSizeUnix ss))
 -- | Since 0.1.14
 instance HasReadBufferSize ClientSettingsUnix where
     readBufferSizeLens f ss = fmap (\p -> ss { clientReadBufferSizeUnix = p }) (f (clientReadBufferSizeUnix ss))
-#endif
 
 -- | Get buffer size used when reading from socket.
 --
@@ -640,11 +620,9 @@ class HasReadWrite a where
 instance HasReadWrite AppData where
     readLens f a = fmap (\x -> a { appRead' = x }) (f (appRead' a))
     writeLens f a = fmap (\x -> a { appWrite' = x }) (f (appWrite' a))
-#if !WINDOWS
 instance HasReadWrite AppDataUnix where
     readLens f a = fmap (\x -> a { appReadUnix = x }) (f (appReadUnix a))
     writeLens f a = fmap (\x -> a { appWriteUnix = x }) (f (appWriteUnix a))
-#endif
 
 appRead :: HasReadWrite a => a -> IO ByteString
 appRead = getConstant . readLens Constant
@@ -652,7 +630,6 @@ appRead = getConstant . readLens Constant
 appWrite :: HasReadWrite a => a -> ByteString -> IO ()
 appWrite = getConstant . writeLens Constant
 
-#if !WINDOWS
 -- | Run an @Application@ with the given settings. This function will create a
 -- new listening socket, accept connections on it, and spawn a new thread for
 -- each connection.
@@ -686,4 +663,3 @@ runUnixClient (ClientSettingsUnix path readBufferSize) app = E.bracket
         { appReadUnix = safeRecv sock readBufferSize
         , appWriteUnix = sendAll sock
         })
-#endif
