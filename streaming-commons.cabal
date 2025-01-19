@@ -97,16 +97,16 @@ test-suite test
     build-tool-depends:
         hspec-discover:hspec-discover
 
-  if flag(use-bytestring-builder)
-    build-depends:     bytestring < 0.10.2.0
-                     , bytestring-builder
-  else
-    build-depends:     bytestring >= 0.10.2.0
+    if flag(use-bytestring-builder)
+      build-depends:     bytestring < 0.10.2.0
+                       , bytestring-builder
+    else
+      build-depends:     bytestring >= 0.10.2.0
 
-  if os(windows)
-    cpp-options:       -DWINDOWS
-  else
-    build-depends:     unix
+    if os(windows)
+      cpp-options:       -DWINDOWS
+    else
+      build-depends:     unix
 
 benchmark count-chars
     default-language: Haskell2010
@@ -143,11 +143,11 @@ benchmark builder-to-bytestring-io
                   , deepseq
                   , streaming-commons
 
-  if flag(use-bytestring-builder)
-    build-depends:     bytestring < 0.10.2.0
-                     , bytestring-builder
-  else
-    build-depends:     bytestring >= 0.10.2.0
+    if flag(use-bytestring-builder)
+      build-depends:     bytestring < 0.10.2.0
+                       , bytestring-builder
+    else
+      build-depends:     bytestring >= 0.10.2.0
 
 source-repository head
   type:     git
