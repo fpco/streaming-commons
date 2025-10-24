@@ -1,0 +1,84 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  cabal:
+    strategy:
+      matrix:
+        ghc: ['8.10.7','9.0.2','9.2.8','9.4.8','9.6.7','9.8.4','9.10.2','9.12.2']
+        runs-on: [windows-latest, macos-latest, ubuntu-latest]
+        exclude:
+          - runs-on: macos-latest  # requires llvm@13 but it's disabled in homebrew
+            ghc: '8.10.7'
+          - runs-on: macos-latest  # requires llvm@13 but it's disabled in homebrew
+            ghc: '9.0.2'
+      fail-fast: false
+    name: Cabal - ${{ matrix.runs-on }} GHC ${{ matrix.ghc }}
+    runs-on: ${{ matrix.runs-on }}
+    steps:
+    - uses: actions/checkout@v5
+    - uses: haskell-actions/setup@v2
+      with:
+        ghc-version: ${{ matrix.ghc }}
+
+    - name: Cache dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cabal
+          dist-newstyle
+        key: ${{ matrix.runs-on }}-cabal-${{ matrix.ghc }}-${{ hashFiles('streaming-commons.cabal') }}
+        restore-keys: |
+          ${{ matrix.runs-on }}-cabal-${{ matrix.ghc }}
+          ${{ matrix.runs-on }}-cabal-
+
+    - name: Update Cabal package list
+      run: cabal v2-update --with-compiler=ghc-${{ matrix.ghc }}
+
+    - name: Build project
+      run: cabal v2-build --with-compiler=ghc-${{ matrix.ghc }}
+
+    - name: Run tests
+      run: cabal v2-test --with-compiler=ghc-${{ matrix.ghc }}
+
+  stack:
+    strategy:
+      matrix:
+        resolver: ['lts-18','lts-19','lts-20','lts-21','lts-22', 'lts-23', 'lts-24','nightly']
+        runs-on: [windows-latest, macos-latest, ubuntu-latest]
+        exclude:
+          - runs-on: macos-latest  # requires llvm@13 but it's disabled in homebrew
+            resolver: 'lts-18'
+          - runs-on: macos-latest  # requires llvm@13 but it's disabled in homebrew
+            resolver: 'lts-19'
+      fail-fast: false
+    name: Stack - ${{ matrix.runs-on }} Resolver ${{ matrix.resolver }}
+    runs-on: ${{ matrix.runs-on }}
+    steps:
+    - uses: actions/checkout@v5
+    - uses: haskell-actions/setup@v2
+      with:
+        enable-stack: true
+
+    - name: Cache dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.stack
+        key: ${{ matrix.runs-on }}-stack-${{ matrix.resolver }}-${{ hashFiles('stack.yaml') }}
+        restore-keys: |
+          ${{ matrix.runs-on }}-stack-${{ matrix.resolver }}-
+          ${{ matrix.runs-on }}-stack-
+
+    - name: Install dependencies for resolver ${{ matrix.resolver }}
+      run: stack setup --resolver ${{ matrix.resolver }}
+
+    - name: Build the project with resolver ${{ matrix.resolver }}
+      run: stack build --resolver ${{ matrix.resolver }}
+
+    - name: Run spec tests with resolver ${{ matrix.resolver }}
+      run: stack test --resolver ${{ matrix.resolver }}
