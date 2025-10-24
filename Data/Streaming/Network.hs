@@ -162,8 +162,10 @@ bindPortGenEx sockOpts sockettype p s = do
                 HostIPv4     -> addrs4 ++ addrs6
                 HostIPv4Only -> addrs4
                 HostIPv6     -> addrs6 ++ addrs4
-                HostIPv6Only -> addrs6
+                HostIPv6Only -> addrs6 -- this isn't enough, IPv6Only socket option must also be set
                 _ -> addrs
+
+        sockOpts' = if s == HostIPv6Only then ((NS.IPv6Only,1):sockOpts) else sockOpts
 
         tryAddrs (addr1:rest@(_:_)) =
                                       E.catch
@@ -177,7 +179,7 @@ bindPortGenEx sockOpts sockettype p s = do
           (NS.socket (NS.addrFamily addr) (NS.addrSocketType addr) (NS.addrProtocol addr))
           NS.close
           (\sock -> do
-              mapM_ (\(opt,v) -> NS.setSocketOption sock opt v) sockOpts
+              mapM_ (\(opt,v) -> NS.setSocketOption sock opt v) sockOpts'
               NS.bind sock (NS.addrAddress addr)
               return sock
           )

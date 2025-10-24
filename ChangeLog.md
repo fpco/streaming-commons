@@ -1,5 +1,9 @@
 # ChangeLog for streaming-commons
 
+## Unreleased
+
+* Fix `!6` host preference incorrectly allows IPv4 connections (https://github.com/fpco/streaming-commons/pull/83)
+
 ## 0.2.3.0
 
 * Allow Unix sockets on Windows (https://github.com/fpco/streaming-commons/pull/80)
