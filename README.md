@@ -4,7 +4,7 @@ streaming-commons
 Common lower-level functions needed by various streaming data libraries.
 Intended to be shared by libraries like conduit and pipes.
 
-[![Build status](https://github.com/fpco/streaming-commons/actions/workflows/tests.yml/badge.svg)](https://github.com/fpco/streaming-commons/actions/workflows/tests.yml)
+[![Build status](https://github.com/fpco/streaming-commons/actions/workflows/ci.yml/badge.svg)](https://github.com/fpco/streaming-commons/actions/workflows/ci.yml)
 
 Dependencies
 ------------
