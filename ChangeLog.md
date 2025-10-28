@@ -1,6 +1,6 @@
 # ChangeLog for streaming-commons
 
-## Unreleased
+## 0.2.3.1
 
 * Fix `!6` host preference incorrectly allows IPv4 connections (https://github.com/fpco/streaming-commons/pull/83)
 * Fix case of windows header files to allow cross-compilation from linux to windows (https://github.com/fpco/streaming-commons/pull/84)
